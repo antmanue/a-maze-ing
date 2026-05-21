@@ -1,0 +1,7 @@
+python3 -m venv venv
+
+source venv/bin/activate
+
+pip3 install mlx-2.2-py3-ubuntu-any.whl
+
+python3 a_maze_ing.py
