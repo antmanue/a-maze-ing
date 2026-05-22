@@ -36,6 +36,9 @@ class MazeDisplay:
         print(f"Pressed key: {keycode}")
         if keycode == 65307:
             os._exit(0)
+        elif keycode == 109:
+            print(f"A desenhar o labirinto...")
+            self.draw_maze()
         return 0
 
     def draw_maze(self) -> None:
@@ -45,6 +48,17 @@ class MazeDisplay:
                 y = row * self.block_size
 
                 cell_value = self.grid[row][col]
-                self.draw_block(x, y, 0xFFFFFF)
 
-        
+                if cell_value & 1:
+                    for pixel_x in range(x, (x + self.block_size)):
+                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x, pixel_y, 0xFFFFFF)
+                if cell_value & 2:
+                    for pixel_y in range(y, (y + self.block_size)):
+                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x, pixel_y, 0xFFFFFF)        
+
+              #  self.draw_block(x, y, 0xFFFFFF)
+
+    #def draw_block(self, start_x: int, start_y: int, color: int) -> None:
+     #   for y in range(start_y, (start_y + self.block_size)):
+      #      for x in range(start_x, (start_x + self.block_size)):
+       #         self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr, x, y, color)
