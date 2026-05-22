@@ -48,6 +48,7 @@ class MazeGenerator:
             row_repr = ""
             for cell in row:
                 coord = (cell.x, cell.y)
+                fill = ""
                 if coord == self.entry:
                     fill = 'O'
                 elif coord == self.exit:
@@ -136,6 +137,7 @@ class MazeGenerator:
         south = 2
         east = 1
         north = 0
+        orientation = -1
         if where == north:
             orientation = south
         elif where == west:

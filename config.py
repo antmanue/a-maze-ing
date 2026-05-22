@@ -18,10 +18,11 @@ def read_config(file_name: str) -> dict[str, str]:
 def calculate_bit(value: int, bit_pos: int) -> int:
     bit_weigth = 8
     iterations = [4, 3, 2, 1]
+    bit = 0
     for _ in range(iterations[bit_pos]):
         bit = int(value / bit_weigth)
         value = value % bit_weigth
-        bit_weigth /= 2
+        bit_weigth = int(bit_weigth / 2)
     return bit
 
 
