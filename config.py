@@ -69,3 +69,9 @@ class Cell:
             print(f"{char}", end='')
         else:
             print(" ", end='')
+
+    def draw_if(self, exist: int, char: str):
+        if exist:
+            return f"{char}"
+        else:
+            return " "

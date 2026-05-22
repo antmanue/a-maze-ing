@@ -11,6 +11,7 @@ run:
 debug:
 
 clean: ## Delete all bytecode (.pyc) that is stored inside __pycache__ and remove virtual env
+	rm maze.txt
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
 	rm -rf venv
