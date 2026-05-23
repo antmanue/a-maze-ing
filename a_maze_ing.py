@@ -17,11 +17,12 @@ class MazeGenerator:
         self.output_file = config["OUTPUT_FILE"]
         self.perfect = bool(config["PERFECT"])
         self.rows: list[list[conf.Cell]] = []
+        self.initial_state = ""
         self.map_hex = ""
         self.generate_map()
 
     def __str__(self) -> str:
-        return self.draw_map()
+        return '\n'.join([self.map_hex, self.draw_map()])
 
     def show_config(self) -> None:
         print(f"WIDTH: {self.width} ({type(self.width)})")
@@ -43,10 +44,10 @@ class MazeGenerator:
                 value = rand.randint(0, 15)
                 cell = conf.Cell(value, x, y)
                 columns.append(cell)
-        print(self.generate_hex())  # Here
+        self.initial_state += self.generate_hex() + '\n'
+        self.initial_state += self.draw_map()
         self.normalize_map()
         self.map_hex = self.generate_hex()
-        print('\n'+self.map_hex)
         self.generate_output()
 
     def normalize_map(self) -> None:
@@ -56,44 +57,37 @@ class MazeGenerator:
                 self.validate_walls(cell)
 
     def generate_borders(self, cell: conf.Cell) -> None:
-        west = 3
-        south = 2
-        east = 1
-        north = 0
+        dir = conf.Directions()
         if cell.y == 0:
-            cell.set_bit(north, 1)
+            cell.set_bit(dir.north, 1)
         if cell.y == self.height - 1:
-            cell.set_bit(south, 1)
+            cell.set_bit(dir.south, 1)
         if cell.x == 0:
-            cell.set_bit(west, 1)
+            cell.set_bit(dir.west, 1)
         if cell.x == self.width - 1:
-            cell.set_bit(east, 1)
+            cell.set_bit(dir.east, 1)
 
     def validate_walls(self, cell: conf.Cell) -> None:
-        west = 3
-        north = 0
+        dir = conf.Directions()
         up = cell.y - 1
         left = cell.x - 1
         if up >= 0:
             upper_cell = self.rows[up][cell.x]
             self.enforce_shared_walls(upper_cell,
-                                      north, cell)
+                                      dir.north, cell)
         if left >= 0:
             left_cell = self.rows[cell.y][left]
             self.enforce_shared_walls(left_cell,
-                                      west, cell)
+                                      dir.west, cell)
 
     def enforce_shared_walls(self, neighboor: conf.Cell, where: int,
-                   cell: conf.Cell) -> None:
-        west = 3
-        south = 2
-        east = 1
-        north = 0
+                             cell: conf.Cell) -> None:
+        dir = conf.Directions()
         orientation = -1
-        if where == north:
-            orientation = south
-        elif where == west:
-            orientation = east
+        if where == dir.north:
+            orientation = dir.south
+        elif where == dir.west:
+            orientation = dir.east
         neighboor_wall = cell.calculate_bit(neighboor.value, orientation)
         cell_wall = cell.calculate_bit(cell.value, where)
         if neighboor_wall != cell_wall:
@@ -115,15 +109,13 @@ class MazeGenerator:
         output += self.map_hex + "\n\n"
         output += str(self.entry) + '\n'
         output += str(self.exit)
-        # output += self.findpath()
         with open(self.output_file, 'w') as file:
-            # file.write('\n'.join(map_hex) + '\n\n')
-            # file.write(str(self.entry) + '\n')
-            # file.write(str(self.exit))
             file.write(output)
 
     def erase_map(self) -> None:
         self.rows.clear()
+        self.initial_state = ""
+        self.map_hex = ""
 
     def regenerate_map(self) -> None:
         self.erase_map()
@@ -134,14 +126,6 @@ class MazeGenerator:
         row_str = self.draw_firs_row(self.rows[0])
         map.append(row_str)
         for row in self.rows:
-            # if row[0].y == 0:   # first_row
-            #     row_repr = ' '
-            #     for cell in row:
-            #         if cell.y == 0 and cell.north:
-            #             row_repr += "_ "
-            # row_str = self.draw_firs_row(row)
-            # map.append(row_str)
-            # row_str = ""
             row_str = ""
             for cell in row:
                 coord = (cell.x, cell.y)
@@ -156,34 +140,16 @@ class MazeGenerator:
                     row_str += cell.draw_if(cell.east, '|')
             map.append(row_str)
         return '\n'.join(map)
-                # fill = ""
-                # if coord == self.entry:
-                #     fill = 'O'
-                # elif coord == self.exit:
-                #     fill = 'X'
-                # if coord == self.entry or coord == self.exit:
-                #     if cell.south:
-                #         row_repr += cell.draw_if(cell.south, "\033[4m" +
-                #                                  fill + "\033[0m")
-                #     else:
-                #         row_repr += fill
-                # else:
-                #     row_repr += cell.draw_if(cell.south, '_')
-        #         if cell.x == self.width - 1:
-        #             row_repr += cell.draw_if(cell.east, '|')
-        #     map.append(row_repr)
-        # return '\n'.join(map)
 
     def draw_firs_row(self, row: list[conf.Cell]) -> str:
         row_str = " "
-        if row[0].y == 0:   # first_row
+        if row[0].y == 0:
             for cell in row:
                 if cell.y == 0 and cell.north:
                     row_str += "_ "
         return row_str
 
     def draw_entry_exit(self, cell: conf.Cell, fill: str) -> str:
-        coord = (cell.x, cell.y)
         row_str = ""
         start_underline = "\033[4m"
         end_underline = "\033[0m"
@@ -193,29 +159,41 @@ class MazeGenerator:
             row_str += fill
         return row_str
 
-    # def check_boundaries_sync(cell: conf.Cell) -> bool:
+    # def check_boundaries_sync(self, cell: conf.Cell) -> bool:
     #     up = cell.y - 1
     #     down = cell.y + 1
     #     left = cell.x - 1
     #     right = cell.x + 1
+    #     valid = True
     #     if up >= 0:
-
+    #     return valid
 
 
 def main() -> None:
+    print("=== A-Maze-ing ===")
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py <config_file>")
         return
     file = sys.argv[1]
     config = conf.read_config(file)
+    print(f"\n--- Reading {file}")
+    [print(f"{key}, {value} ({type(value)})") for key, value in config.items()]
     maze = MazeGenerator(config)
+    print(f"\n--- Creating maze based on {file} data")
+    print("\n- Maze configuration:")
     maze.show_config()
-    print()
 
+    print("\n- Maze initial map")
+    print(maze.initial_state)
+    print("\n- Maze normalized map")
     print(maze)
-    print()
 
+    print("\n------------------------\n")
+    print("Map after regen:")
     maze.regenerate_map()
+    print("\n- Maze initial map")
+    print(maze.initial_state)
+    print("\n- Maze normalized map")
     print(maze)
     print()
 

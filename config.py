@@ -59,3 +59,11 @@ class Cell:
             return f"{char}"
         else:
             return " "
+
+
+class Directions:
+    def __init__(self) -> None:
+        self.west = 3
+        self.south = 2
+        self.east = 1
+        self.north = 0
