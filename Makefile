@@ -7,6 +7,7 @@ venv: ## Creates virtual environment to isolate dependencies
 	@echo "Activate with: source venv/bin/activate"
 
 run:
+	python3 a_maze_ing.py config.txt
 
 debug:
 
