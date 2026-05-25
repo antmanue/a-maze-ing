@@ -5,9 +5,9 @@ import os
 class MazeDisplay:
     def __init__(self) -> None:
         self.grid: List[List[int]] = [
-            [600, 600, 600],
-            [600, 600, 600],
-            [600, 600, 600]
+            [9, 2, 3],
+            [12, 0, 2],
+            [5, 4, 6],
         ]
         self.block_size: int = 64
         self.m: Mlx = Mlx()
