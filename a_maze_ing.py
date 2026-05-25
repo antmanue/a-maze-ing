@@ -7,15 +7,13 @@ import sys
 
 
 class MazeGenerator:
-    def __init__(self, config: dict[str, str]) -> None:
-        self.width = int(config["WIDTH"])
-        self.height = int(config["HEIGHT"])
-        self.entry = tuple([int(coordinate) for coordinate in
-                            config["ENTRY"].split(',')])
-        self.exit = tuple([int(coordinate) for coordinate in
-                           config["EXIT"].split(',')])
-        self.output_file = config["OUTPUT_FILE"]
-        self.perfect = bool(config["PERFECT"])
+    def __init__(self, config: conf.Config) -> None:
+        self.width = config.width
+        self.height = config.height
+        self.entry = config.entry
+        self.exit = config.exit
+        self.output_file = config.output_file
+        self.perfect = config.perfect
         self.rows: list[list[conf.Cell]] = []
         self.initial_state = ""
         self.map_hex = ""
@@ -73,25 +71,20 @@ class MazeGenerator:
         left = cell.x - 1
         if up >= 0:
             upper_cell = self.rows[up][cell.x]
-            self.enforce_shared_walls(upper_cell,
+            self.enforce_shared_wall(upper_cell,
                                       dir.north, cell)
         if left >= 0:
             left_cell = self.rows[cell.y][left]
-            self.enforce_shared_walls(left_cell,
+            self.enforce_shared_wall(left_cell,
                                       dir.west, cell)
 
-    def enforce_shared_walls(self, neighboor: conf.Cell, where: int,
+    def enforce_shared_wall(self, neighbour: conf.Cell, wall: int,
                              cell: conf.Cell) -> None:
         dir = conf.Directions()
-        orientation = -1
-        if where == dir.north:
-            orientation = dir.south
-        elif where == dir.west:
-            orientation = dir.east
-        neighboor_wall = cell.calculate_bit(neighboor.value, orientation)
-        cell_wall = cell.calculate_bit(cell.value, where)
-        if neighboor_wall != cell_wall:
-            cell.set_bit(where, neighboor_wall)
+        neighbour_wall = neighbour.calculate_bit(dir.opposite(wall))
+        cell_wall = cell.calculate_bit(wall)
+        if neighbour_wall != cell_wall:
+            cell.set_bit(wall, neighbour_wall)
 
     def generate_hex(self) -> str:
         map_hex: list[str] = []
@@ -123,72 +116,75 @@ class MazeGenerator:
 
     def draw_map(self) -> str:
         map: list[str] = []
-        row_str = self.draw_firs_row(self.rows[0])
+        dir = conf.Directions()
+        row_str = self.draw_firs_row()
         map.append(row_str)
         for row in self.rows:
             row_str = ""
             for cell in row:
                 coord = (cell.x, cell.y)
-                row_str += cell.draw_if(cell.west, '|')
+                row_str += cell.draw_if(dir.west)
                 if coord == self.entry:
-                    row_str += self.draw_entry_exit(cell, 'O')
+                    row_str += cell.draw_if(dir.south, 'O')
                 elif coord == self.exit:
-                    row_str += self.draw_entry_exit(cell, 'X')
+                    row_str += cell.draw_if(dir.south, 'X')
                 else:
-                    row_str += cell.draw_if(cell.south, '_')
+                    row_str += cell.draw_if(dir.south)
                 if cell.x == self.width - 1:
-                    row_str += cell.draw_if(cell.east, '|')
+                    row_str += cell.draw_if(dir.east)
             map.append(row_str)
         return '\n'.join(map)
 
-    def draw_firs_row(self, row: list[conf.Cell]) -> str:
+    def draw_firs_row(self) -> str:
         row_str = " "
-        if row[0].y == 0:
+        first_row = self.rows[0]
+        for cell in first_row:
+            if cell.north:
+                row_str += "_ "
+        return row_str
+
+    def check_all_boundaries(self) -> bool:
+        for row in self.rows:
             for cell in row:
-                if cell.y == 0 and cell.north:
-                    row_str += "_ "
-        return row_str
+                if not self.is_boundaries_synced(cell):
+                    return False
+        return True
 
-    def draw_entry_exit(self, cell: conf.Cell, fill: str) -> str:
-        row_str = ""
-        start_underline = "\033[4m"
-        end_underline = "\033[0m"
-        if cell.south:
-            row_str += start_underline + fill + end_underline
-        else:
-            row_str += fill
-        return row_str
+    def is_boundaries_synced(self, cell: conf.Cell) -> bool:
+        dir = conf.Directions()
+        up = cell.y - 1
+        down = cell.y + 1
+        left = cell.x - 1
+        right = cell.x + 1
+        if up >= 0:
+            neighbour_cell = self.rows[up][cell.x]
+            if not self.is_wall_synced(neighbour_cell, dir.north, cell):
+                return False
+        if left >= 0:
+            neighbour_cell = self.rows[cell.y][left]
+            if not self.is_wall_synced(neighbour_cell, dir.west, cell):
+                return False
+        if right <= self.width - 1:
+            neighbour_cell = self.rows[cell.y][right]
+            if not self.is_wall_synced(neighbour_cell, dir.east, cell):
+                return False
+        if down <= self.height - 1:
+            neighbour_cell = self.rows[down][cell.x]
+            if not self.is_wall_synced(neighbour_cell, dir.south, cell):
+                return False
+        return True
 
-    # def check_boundaries_sync(self, cell: conf.Cell) -> bool:
-    #     up = cell.y - 1
-    #     down = cell.y + 1
-    #     left = cell.x - 1
-    #     right = cell.x + 1
-    #     valid = True
-    #     if up >= 0:
-    #     return valid
+    def is_wall_synced(self, neighbour: conf.Cell, wall: int,
+                             cell: conf.Cell) -> bool:
+        dir = conf.Directions()
+        neighbour_wall = neighbour.calculate_bit(dir.opposite(wall))
+        cell_wall = cell.calculate_bit(wall)
+        if neighbour_wall != cell_wall:
+            return False
+        return True
 
 
-def main() -> None:
-    print("=== A-Maze-ing ===")
-    if len(sys.argv) != 2:
-        print("Usage: python3 a_maze_ing.py <config_file>")
-        return
-    file = sys.argv[1]
-    config = conf.read_config(file)
-    print(f"\n--- Reading {file}")
-    [print(f"{key}, {value} ({type(value)})") for key, value in config.items()]
-    maze = MazeGenerator(config)
-    print(f"\n--- Creating maze based on {file} data")
-    print("\n- Maze configuration:")
-    maze.show_config()
-
-    print("\n- Maze initial map")
-    print(maze.initial_state)
-    print("\n- Maze normalized map")
-    print(maze)
-
-    print("\n------------------------\n")
+def test_map_regen(maze):
     print("Map after regen:")
     maze.regenerate_map()
     print("\n- Maze initial map")
@@ -196,6 +192,47 @@ def main() -> None:
     print("\n- Maze normalized map")
     print(maze)
     print()
+
+
+def test_all_walls_synced(maze: MazeGenerator):
+    print("Is all boundaries of all cells in sync? "
+          f"{maze.check_all_boundaries()}")
+    print("\nModify a cell to break wall sync")
+    x, y = input("Modify cell in coordinates (x, y): ").split(' ')
+    wall, value = input("Choose a wall and new value: ").split(' ')
+    maze.rows[int(y)][int(x)].set_bit(int(wall), int(value))
+    print(maze)
+    print("Is all boundaries of all cells in sync? "
+          f"{maze.check_all_boundaries()}")
+
+def main() -> None:
+    print("=== A-Maze-ing ===")
+    if len(sys.argv) != 2:
+        print("Usage: python3 a_maze_ing.py <config_file>")
+        return
+    file = sys.argv[1]
+    config = conf.Config(file)
+    try:
+        config.parse_config(config.content)
+        print(f"\n--- Reading {file}")
+        config.print()
+        maze = MazeGenerator(config)
+        print(f"\n--- Creating maze based on {file} data")
+        print("\n- Maze configuration:")
+        maze.show_config()
+
+        print("\n- Maze initial map")
+        print(maze.initial_state)
+        print("\n- Maze normalized map")
+        print(maze)
+
+        print("\n------------------------\n")
+        test_map_regen(maze)
+
+        print("\n------------------------\n")
+        test_all_walls_synced(maze)
+    except ValueError as err:
+        print(err)
 
 
 if __name__ == "__main__":
