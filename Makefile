@@ -1,12 +1,19 @@
-install: ## Install linters
+VENV_DIR:=venv
+ACTIVATE_VENV:=. venv/bin/activate
+
+all: venv install run
+
+venv: ## 1. Creates virtual environment to isolate dependencies
+	python3 -m venv $(VENV_DIR)
+	. $(ACTIVATE_VENV)
+	which python3
+# 	@echo "Activate with: source venv/bin/activate"
+
+install: ## 2. Install linters
 	pip install mypy
 	pip install flake8
 
-venv: ## Creates virtual environment to isolate dependencies
-	python3 -m venv venv
-	@echo "Activate with: source venv/bin/activate"
-
-run:
+run: ## Run
 	python3 a_maze_ing.py config.txt
 
 debug:

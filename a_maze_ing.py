@@ -5,6 +5,7 @@ import config as conf
 import utils
 import random as rand
 import sys
+from mazegen.display import MazeDisplay
 
 
 class MazeGenerator:
@@ -195,11 +196,21 @@ def main() -> None:
     print("\n- Maze normalized map")
     print(maze)
 
-    print("\n------------------------\n")
-    test_map_regen(maze)
+    # print("\n------------------------\n")
+    # test_map_regen(maze)
 
-    print("\n------------------------\n")
-    test_all_walls_synced(maze)
+    # print("\n------------------------\n")
+    # test_all_walls_synced(maze)
+    grid: list[list[int]] = []
+    for row in maze.rows:
+        line: list[int] = []
+        grid.append(line)
+        for cell in row:
+            line.append(cell.value)
+
+    display = MazeDisplay(grid)
+    display.render_terminal()
+    display.run()
 
 
 def test_map_regen(maze: MazeGenerator) -> None:
