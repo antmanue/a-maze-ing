@@ -6,11 +6,12 @@ class Config:
         self.file_name = file_name
         self.width: int = 0
         self.height: int = 0
-        self.entry: tuple[int, int] = ()
-        self.exit: tuple[int, int] = ()
+        self.entry: tuple[int, int] = (0, 0)
+        self.exit: tuple[int, int] = (0, 0)
         self.output_file: str = ""
-        self.perfect: bool = 0
+        self.perfect: bool = False
         self.content = self.read_config(file_name)
+        self.valid = True
 
     def print(self) -> None:
         print(f"WIDTH = {self.width} ({type(self.width)})")
@@ -26,7 +27,6 @@ class Config:
         config = self.read_config(self.file_name)
         self.parse_config(config)
 
-
     def read_config(self, file_name: str) -> dict[str, str]:
         with open(file_name) as file:
             config: dict[str, str] = {}
@@ -37,132 +37,72 @@ class Config:
             return config
 
     def parse_config(self, config: dict[str, str]) -> None:
-        self.width = self.validate_pos_int("WIDTH", config["WIDTH"])
-        self.height = self.validate_pos_int("HEIGHT", config["HEIGHT"])
-        self.entry = tuple([self.validate_pos_int("ENTRY", coordinate)
-                            for coordinate in config["ENTRY"].split(',')])
-        self.exit = tuple([self.validate_pos_int("EXIT", coordinate)
-                            for coordinate in config["EXIT"].split(',')])
+        self.width = self.validate_int("WIDTH", config["WIDTH"])
+        self.height = self.validate_int("HEIGHT", config["HEIGHT"])
+        entry = config["ENTRY"].split(',')
+        self.entry = (self.validate_int("ENTRY", entry[0]),
+                      self.validate_int("ENTRY", entry[1]))
+        exit = config["EXIT"].split(',')
+        self.exit = (self.validate_int("EXIT", exit[0]),
+                     self.validate_int("EXIT", exit[1]))
         self.output_file = self.validate_str("OUTPUT_FILE",
-                                                 config["OUTPUT_FILE"])
+                                             config["OUTPUT_FILE"])
         self.perfect = self.validate_bool("PERFECT", config["PERFECT"])
+        if not self.valid:
+            raise ConfigError("Configuration errors found, exiting program.")
 
-    def validate_pos_int(self, key: str, value: int) -> int:
+    def validate_int(self, key: str, value: str) -> int:
+        arg = -1
         try:
-            arg: int = int(value)
-            if arg < 0:
-                # raise(ValueError(f"Error found in '{key}' at '{self.file_name}': positive integer expected, found {arg}"))
-                raise(ValueError(f"positive integer expected, found {arg}"))
-        except ValueError as err:
+            arg = int(value)
+            if key in ["HEIGHT", "WIDTH"] and arg <= 0:
+                raise (ConfigError(f"invalid value '{arg}', expected positive "
+                                   "<int>"))
+            elif key in ["ENTRY", "EXIT"] and arg < 0:
+                raise (ConfigError(f"invalid value '{arg}', expected non "
+                                   "negative <int>"))
+        except (ValueError, ConfigError, TypeError) as err:
+            self.valid = False
             print(f"Error found in '{key}' at '{self.file_name}': {err}")
+            # raise ConfigError(f"Error found in '{key}' at "
+            #                   f"'{self.file_name}': {err}") from err
         return arg
 
     def validate_str(self, key: str, value: str) -> str:
+        arg = ""
         try:
             arg = str(value)
-        except ValueError as err:
-            print(f"Error found in {key}: {err}")
+        except (ValueError, ConfigError, TypeError) as err:
+            self.valid = False
+            print(f"Error found in '{key}' at '{self.file_name}': {err}")
+            # raise ConfigError(f"Error found in '{key}' at "
+            #                   f"'{self.file_name}': {err}") from err
         return arg
 
-    def validate_bool(self, key: str, value: bool) -> bool:
+    def validate_bool(self, key: str, value: str) -> bool:
+        arg = False
         try:
+            value = self.bool_str(value)
             arg = bool(value)
-        except ValueError as err:
-            print(f"Error found in {key}: {err}")
+        except (ValueError, ConfigError, TypeError) as err:
+            self.valid = False
+            print(f"Error found in '{key}' at '{self.file_name}': {err}")
+            # raise ConfigError(f"Error found in '{key}' at "
+            #                   f"'{self.file_name}': {err}") from err
         return arg
 
-
-class Cell:
-    def __init__(self, value: int, x: int, y: int) -> None:
-        self.value = value
-        # self.west = self.calculate_bit(value, 3)
-        # self.south = self.calculate_bit(value, 2)
-        # self.east = self.calculate_bit(value, 1)
-        # self.north = self.calculate_bit(value, 0)
-        self.west = self.calculate_bit(3)
-        self.south = self.calculate_bit(2)
-        self.east = self.calculate_bit(1)
-        self.north = self.calculate_bit(0)
-        self.x = x
-        self.y = y
-
-    # @staticmethod
-    # #   Given the bit position from right to left, calculates the bit
-    # #   value (0 or 1)
-    # def calculate_bit(value: int, bit_pos: int) -> int:
-    #     bit_weigth = 8
-    #     iterations = [4, 3, 2, 1]
-    #     bit = 0
-    #     for _ in range(iterations[bit_pos]):
-    #         bit = int(value / bit_weigth)
-    #         value = value % bit_weigth
-    #         bit_weigth = int(bit_weigth / 2)
-    #     return bit
-    def calculate_bit(self, bit_pos: int) -> int:
-        bit_weigth = 8
-        iterations = [4, 3, 2, 1]
-        value = self.value
-        bit = 0
-        for _ in range(iterations[bit_pos]):
-            bit = int(value / bit_weigth)
-            value = value % bit_weigth
-            bit_weigth = int(bit_weigth / 2)
-        return bit
-
-    def update_value(self, value: int) -> None:
-        self.value = value    # 4 bits (WSEN) from 0-15 => (0000)-(1111)
-        # self.west = self.calculate_bit(value, 3)
-        # self.south = self.calculate_bit(value, 2)
-        # self.east = self.calculate_bit(value, 1)
-        # self.north = self.calculate_bit(value, 0)
-        self.west = self.calculate_bit(3)
-        self.south = self.calculate_bit(2)
-        self.east = self.calculate_bit(1)
-        self.north = self.calculate_bit(0)
-
-    def set_bit(self, bit_pos: int, bit_value: int) -> None:
-        bit_weigth: int = pow(2, bit_pos)
-        if bit_value == 1:
-            # if self.calculate_bit(self.value, bit_pos) != 1:
-            if self.calculate_bit(bit_pos) != 1:
-                self.update_value(self.value + bit_weigth)
-        else:
-            # if self.calculate_bit(self.value, bit_pos) != 0:
-            if self.calculate_bit(bit_pos) != 0:
-                self.update_value(self.value - bit_weigth)
-
-    def get_bits(self) -> None:
-        # [print(self.calculate_bit(self.value, x), end='')
-        [print(self.calculate_bit(x), end='')
-            for x in reversed(range(4))]
-
-    def draw_if(self, direction: int, draw: str = None) -> str:
-        dir = Directions()
-        exist = self.calculate_bit(direction)
-        if exist:
-            if direction == dir.west or direction == dir.east:
-                return "|"
-            elif direction == dir.south:
-                if draw:
-                    start_underline = "\033[4m"
-                    end_underline = "\033[0m"
-                    return start_underline + draw + end_underline
-                else:
-                    return "_"
-        else:
-            if draw:
-                return draw
-            else:
-                return " "
+    @staticmethod
+    def bool_str(s: str) -> str:
+        s = s.lower()
+        dict_bool = {"false": "", "true": "true"}
+        if s in dict_bool:
+            return dict_bool[s]
+        raise ValueError(f"invalid value '{s}', expected <bool>")
 
 
-class Directions:
-    def __init__(self) -> None:
-        self.west = 3
-        self.south = 2
-        self.east = 1
-        self.north = 0
+class ConfigError(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
 
-    def opposite(self, direction: int) -> int:
-        oppos = [self.south, self.west, self.north, self.east]
-        return oppos[direction]
+    def __str__(self) -> str:
+        return super().__str__()
