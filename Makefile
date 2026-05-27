@@ -1,15 +1,10 @@
-VENV_DIR:=venv
-ACTIVATE_VENV:=. venv/bin/activate
-
 all: venv install run
 
 venv: ## 1. Creates virtual environment to isolate dependencies
-	python3 -m venv $(VENV_DIR)
-	. $(ACTIVATE_VENV)
-	which python3
-# 	@echo "Activate with: source venv/bin/activate"
+	python3 -m venv venv
+	@echo "Activate with: source venv/bin/activate"
 
-install: ## 2. Install linters
+install: ## 2. DONT FORGET TO ACTIVATE IT FIRST. Install linters
 	pip install mypy
 	pip install flake8
 
