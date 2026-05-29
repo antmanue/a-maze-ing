@@ -14,6 +14,10 @@ class MazeDisplay:
         self.m.mlx_hook(self.win_ptr, 33, 0, self.close_window, 0)
         self.m.mlx_hook(self.win_ptr, 2, 1, self.handle_keypress, 0)
         self.m.mlx_hook(self.win_ptr, 12, 0, self.draw_maze_expose, 0)
+        self.drawn: bool = False
+        self.show_path: bool = True
+        self.wall_colors: list[int] = [0xFFFFFF, 0x00FF00, 0x000FF, 0xFFFF00]
+        self.color_index: int = 0
 
     def render_terminal(self) -> None:
         print("=== Test Maze ===")
