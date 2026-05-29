@@ -1,21 +1,47 @@
-from typing import List, Any
+from typing import List, Any, Tuple
 from mlx import Mlx
 import os
 
 class MazeDisplay:
-    def __init__(self) -> None:
-        self.grid: List[List[int]] = [
+    def __init__(self,
+                 grid: List[List[int]] = None,
+                 start: Tuple[int, int] = (0, 0),
+                 end: Tuple[int, int] = (2, 2),
+                 path: List[Tuple[int, int]] = None) -> None:
+
+        # Data
+        self.grid = grid if grid is not None else [
             [9, 2, 3],
             [12, 0, 2],
             [5, 4, 6],
         ]
+
+        self.start = start
+        self.end = end
+        self.path = path if path is not None else [(0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]
+        
         self.block_size: int = 64
+        # Grid
+        self.window_width = len(self.grid[0]) * self.block_size
+        self.window_height = len(self.grid) * self.block_size
+        # Init
         self.m: Mlx = Mlx()
         self.mlx_ptr: Any = self.m.mlx_init()
-        self.win_ptr: Any = self.m.mlx_new_window(self.mlx_ptr, 800, 600, "A-Maze-ing")
+        self.win_ptr: Any = self.m.mlx_new_window(self.mlx_ptr, self.window_width, self.window_height, "A-Maze-ing")
+        # State
+        self.needs_update: bool = True
+        self.show_path: bool = True
+
+        # Wall Colors Index
+        self.wall_colors: List[int] = [0xFFFFFF, 0x00FF00, 0x0000FF, 0XFFFF00]
+        self.color_index: int = 0
+
+
+        # Event hook
         self.m.mlx_hook(self.win_ptr, 33, 0, self.close_window, 0)
         self.m.mlx_hook(self.win_ptr, 2, 1, self.handle_keypress, 0)
         self.m.mlx_hook(self.win_ptr, 12, 0, self.draw_maze_expose, 0)
+        self.m.mlx_loop_hook(self.mlx_ptr, self.draw_maze_hook, 0)
         self.drawn: bool = False
         self.show_path: bool = True
         self.wall_colors: list[int] = [0xFFFFFF, 0x00FF00, 0x000FF, 0xFFFF00]
@@ -40,9 +66,14 @@ class MazeDisplay:
         print(f"Pressed key: {keycode}")
         if keycode == 65307:
             os._exit(0)
-        elif keycode == 109:
-            print(f"A desenhar o labirinto...")
-            self.draw_maze()
+        # Tecla 'C' - change color    
+        elif keycode == 99:
+            self.color_index = (self.color_index + 1) % len(self.wall_colors)
+            self.needs_update = True
+        # Tecla 'P' Liga/Desliga o caminho da solucao
+        elif keycode == 112:
+            self.show_path = not self.show_path
+            self.needs_update = True
         return 0
 
     def draw_maze_expose(self, *args: Any) -> int:
@@ -59,16 +90,16 @@ class MazeDisplay:
 
                 if cell_value & 1:
                     for pixel_x in range(x, (x + self.block_size)):
-                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y, 0xFFFFFFFF)
+                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y, self.wall_colors[self.color_index])
                 if cell_value & 2:
                     for pixel_y in range(y, (y + self.block_size)):
-                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x + self.block_size, pixel_y, 0xFFFFFFFF)        
+                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x + self.block_size, pixel_y, self.wall_colors[self.color_index])        
                 if cell_value & 4:
                     for pixel_x in range(x, (x + self.block_size)):
-                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y + self.block_size, 0xFFFFFFFF)
+                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y + self.block_size, self.wall_colors[self.color_index])
                 if cell_value & 8:
                     for pixel_y in range(y, (y + self.block_size)):
-                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x, pixel_y, 0xFFFFFFFF)
+                        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x, pixel_y, self.wall_colors[self.color_index])
               #  self.draw_block(x, y, 0xFFFFFF)
 
     
