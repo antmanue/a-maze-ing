@@ -1,18 +1,6 @@
 #!/usr/bin/env python3
 
 
-class Directions:
-    def __init__(self) -> None:
-        self.west = 3
-        self.south = 2
-        self.east = 1
-        self.north = 0
-
-    def opposite(self, direction: int) -> int:
-        oppos = [self.south, self.west, self.north, self.east]
-        return oppos[direction]
-
-
 class Cell:
     def __init__(self, value: int, x: int, y: int) -> None:
         self.value = value
@@ -50,9 +38,9 @@ class Cell:
             if self.calculate_bit(bit_pos) != 0:
                 self.update_value(self.value - bit_weigth)
 
-    def get_bits(self) -> None:
-        [print(self.calculate_bit(x), end='')
-            for x in reversed(range(4))]
+    def get_bits(self) -> str:
+        bits = [str(self.calculate_bit(x)) for x in reversed(range(4))]
+        return ''.join(bits)
 
     def draw_if(self, direction: int, draw: str = "") -> str:
         dir = Directions()
@@ -74,3 +62,51 @@ class Cell:
             else:
                 output = " "
         return output
+
+
+class Directions:
+    def __init__(self) -> None:
+        self.west = 3   # Byte position 1000 of Wall
+        self.south = 2  # Byte position 0100 of Wall
+        self.east = 1   # Byte position 0010 of Wall
+        self.north = 0  # Byte position 0001 of Wall
+
+    def opposite(self, direction: int) -> int:
+        oppos = [self.south, self.west, self.north, self.east]
+        return oppos[direction]
+
+    def between(self, orig: Cell, dest: Cell) -> int:
+        if orig.x > dest.x:
+            return self.west
+        elif orig.y < dest.y:
+            return self.south
+        elif orig.x < dest.x:
+            return self.east
+        elif orig.y > dest.y:
+            return self.north
+        raise ValueError("Directions:between() - No walls in between "
+                         f"{(orig.y, orig.x)} and {(dest.y, dest.x)}")
+
+
+class Neighbour:
+    def __init__(self, x: int, y: int, direction: int) -> None:
+        self.x = self.set_x(x, direction)
+        self.y = self.set_y(y, direction)
+
+    def set_x(self, x: int, direction: int) -> int:
+        dir = Directions()
+        if direction == dir.east:
+            return x + 1
+        elif direction == dir.west:
+            return x - 1
+        else:
+            return x
+
+    def set_y(self, y: int, direction: int) -> int:
+        dir = Directions()
+        if direction == dir.north:
+            return y - 1
+        elif direction == dir.south:
+            return y + 1
+        else:
+            return y

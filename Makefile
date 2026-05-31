@@ -7,6 +7,8 @@ venv: ## 1. Creates virtual environment to isolate dependencies
 install: ## 2. DONT FORGET TO ACTIVATE IT FIRST. Install linters
 	pip install mypy
 	pip install flake8
+	pip install mlx-2.2-py3-none-any.whl
+	python3 -c "from mlx import Mlx; print('MLX OK')"
 
 run: ## Run
 	python3 a_maze_ing.py config.txt
