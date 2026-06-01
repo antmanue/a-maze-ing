@@ -33,7 +33,7 @@ class MazeDisplay:
         self.show_path: bool = True
 
         # Wall Colors Index
-        self.wall_colors: List[int] = [0xFFFFFF, 0x00FF00, 0x0000FF, 0XFFFF00]
+        self.wall_colors: List[int] = [0xFFFFFFFF, 0xFF00FF00, 0xFF0000FF, 0XFFFFFF00]
         self.color_index: int = 0
 
 
@@ -44,7 +44,13 @@ class MazeDisplay:
         self.m.mlx_loop_hook(self.mlx_ptr, self.draw_maze_hook, 0)
         self.drawn: bool = False
         self.show_path: bool = True
-        self.wall_colors: list[int] = [0xFFFFFF, 0x00FF00, 0x000FF, 0xFFFF00]
+        self.wall_colors: list[int] = [
+            0xFFFFFFFF, #branco
+            0xFF00FF00, #verde
+            0xFF0000FF, #azul
+            0xFFFFFF00, #amarelo
+            0xFFF88379 #coral
+        ]
         self.color_index: int = 0
 
     def render_terminal(self) -> None:
@@ -66,7 +72,7 @@ class MazeDisplay:
         print(f"Pressed key: {keycode}")
         if keycode == 65307:
             os._exit(0)
-        # Tecla 'C' - change color    
+        # Tecla 'C' Change color    
         elif keycode == 99:
             self.color_index = (self.color_index + 1) % len(self.wall_colors)
             self.needs_update = True
@@ -79,8 +85,32 @@ class MazeDisplay:
     def draw_maze_expose(self, *args: Any) -> int:
             self.draw_maze()
             self.drawn = True
+    
+    def draw_block(self, start_x: int, start_y: int, color: int) -> None:
+            for y in range(start_y, (start_y + self.block_size)):
+                for x in range(start_x, (start_x + self.block_size)):
+                    self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr, x, y, color)
 
     def draw_maze(self) -> None:
+
+        self.m.mlx_clear_window(self.mlx_ptr, self.win_ptr)
+
+        if self.show_path:
+            for row, col in self.path:
+                x = col * self.block_size
+                y = row * self.block_size
+                self.draw_block(x, y, 0xFF289D8C)
+        
+        start_row, start_col = self.start
+        start_x = start_col * self.block_size
+        start_y = start_row * self.block_size
+        self.draw_block(start_x, start_y, 0xF500FF00)
+        
+        end_row, end_col = self.end
+        end_x = end_col * self.block_size
+        end_y = end_row * self.block_size
+        self.draw_block(end_x, end_y, 0xFFFF0000)
+        
         for row in range(len(self.grid)):
             for col in range(len(self.grid[row])):
                 x = col * self.block_size
@@ -100,11 +130,11 @@ class MazeDisplay:
                 if cell_value & 8:
                     for pixel_y in range(y, (y + self.block_size)):
                         self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x, pixel_y, self.wall_colors[self.color_index])
-              #  self.draw_block(x, y, 0xFFFFFF)
-
+        
+    def draw_maze_hook(self, *args: Any) -> int:
+        if self.needs_update is True:
+            self.draw_maze()
+            self.needs_update = False
+        return 0
+        
     
-
-    #def draw_block(self, start_x: int, start_y: int, color: int) -> None:
-     #   for y in range(start_y, (start_y + self.block_size)):
-      #      for x in range(start_x, (start_x + self.block_size)):
-       #         self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr, x, y, color)
