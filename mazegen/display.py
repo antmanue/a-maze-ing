@@ -45,7 +45,8 @@ class MazeDisplay:
         self.m.mlx_loop_hook(self.mlx_ptr, self.draw_maze_hook, 0)
 
         # Walls
-        self.wall_thickness: int = 3
+        self.wall_thickness: int = 4
+        self.path_thickness: int = 24
         self.wall_colors: list[int] = [
             0xFFFFFFFF, #branco
             0xFF00FF00, #verde
@@ -67,6 +68,9 @@ class MazeDisplay:
 
     def run(self) -> None:
         print("Opening A-Maze-ing graphic window...")
+        print("Press C to change color")
+        print("Press P to turn on/off the path")
+        print("Press R to redraw a new maze color")
         self.m.mlx_loop(self.mlx_ptr)
 
     def close_window(self, *args: Any) -> int:
@@ -81,6 +85,7 @@ class MazeDisplay:
             os._exit(0)
         # Tecla 'C' Change color    
         elif keycode == 99:
+            print("Maze color has been changed")
             self.color_index = (self.color_index + 1) % len(self.wall_colors)
             self.needs_update = True
         # Tecla 'P' Liga/Desliga o caminho da solucao
@@ -98,60 +103,123 @@ class MazeDisplay:
         self.drawn = True
         return 0
     
-    def draw_block(self, start_x: int, start_y: int, color: int) -> None:
-        for y in range(start_y, (start_y + self.block_size)):
-            for x in range(start_x, (start_x + self.block_size)):
+    def draw_rect(self, start_x: int, start_y: int, width: int, height: int, color: int) -> None:
+        for y in range(start_y, start_y + height):
+            for x in range(start_x, start_x + width):
                 self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr, x, y, color)
 
     def draw_maze(self) -> None:
 
-        self.m.mlx_clear_window(self.mlx_ptr, self.win_ptr)
-
-        if self.show_path:
-            for row, col in self.path:
-                x = col * self.block_size
-                y = row * self.block_size
-                self.draw_block(x, y, 0xFF289D8C)
+        self.draw_rect(0, 0, self.window_width, self.window_height, 0XFF000000)
         
-        start_row, start_col = self.start
-        start_x = start_col * self.block_size
-        start_y = start_row * self.block_size
-        self.draw_block(start_x, start_y, 0xF500FF00)
-        
-        end_row, end_col = self.end
-        end_x = end_col * self.block_size
-        end_y = end_row * self.block_size
-        self.draw_block(end_x, end_y, 0xFFFF0000)
-
         thick = self.wall_thickness
-        
+
+        #Layer 1
+        for row in range (len(self.grid)):
+            for col in range (len(self.grid[row])):
+                if self.grid[row][col] == 15:
+                    x = col * self.block_size
+                    y = row * self.block_size
+                    self.draw_rect(x + thick, y + thick, self.block_size - (2 * thick), self.block_size -(2 *thick), 0xFFD3D3D3)
+
+        #Layer 2
+        if self.show_path and len(self.path) > 0:
+            pt = self.path_thickness
+            half_block = self.block_size // 2
+
+            for i in range (len(self.path) - 1):
+                r1, c1 = self.path[i]
+                r2, c2 = self.path[i+1]
+
+                cx1 = c1 * self.block_size + half_block
+                cy1 = r1 * self.block_size + half_block
+                cx2 = c2 * self.block_size + half_block
+                cy2 = r2 * self.block_size + half_block
+
+                lx = min(cx1, cx2) - (pt // 2)
+                ly = min(cy1, cy2) - (pt // 2)
+                lw = abs(cx1 - cx2) + pt if cx1 != cx2 else pt
+                lh = abs(cy1 - cy2) + pt if cy1 != cy2 else pt
+
+                self.draw_rect(lx, ly, lw, lh, 0xFF289D8C)
+
+        #Layer 3
+        half_block = self.block_size // 2
+
+        start_row, start_col = self.start
+        st_cx = start_col * self.block_size + half_block
+        st_cy = start_row * self.block_size + half_block
+        self.draw_rect(st_cx - 24, st_cy - 24, 48, 48, 0xFF00FF00)
+
+        end_row, end_col = self.end
+        ed_cx = end_col * self.block_size + half_block
+        ed_cy = end_row * self.block_size + half_block
+        self.draw_rect(ed_cx - 24, ed_cy - 24, 48, 48, 0xFFFF0000)
+
+        #Layer 4
+        current_color = self.wall_colors[self.color_index]
+
         for row in range(len(self.grid)):
             for col in range(len(self.grid[row])):
                 x = col * self.block_size
                 y = row * self.block_size
                 cell_value = self.grid[row][col]
 
-                if cell_value == 15:
-                    self.draw_block(x, y, 0xFFD3D3D3)
-
+                #Wall N
                 if cell_value & 1:
-                    for thick_y in range(thick):
-                        for pixel_x in range(x, (x + self.block_size)):
-                            self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y + thick_y, self.wall_colors[self.color_index])
+                    self.draw_rect(x, y, self.block_size, thick, current_color)
+                #Wall E
                 if cell_value & 2:
-                    for thick_x in range(thick):
-                        for pixel_y in range(y, (y + self.block_size)):
-                            self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x - 1 - thick_x + self.block_size, pixel_y, self.wall_colors[self.color_index])        
+                    self.draw_rect(x + self.block_size - thick, y, thick, self.block_size, current_color)
+                #Wall S
                 if cell_value & 4:
-                    for thick_y in range(thick):
-                        for pixel_x in range(x, (x + self.block_size)):
-                            self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y - 1 - thick_y + self.block_size, self.wall_colors[self.color_index])
+                    self.draw_rect(x, y + self.block_size - thick, self.block_size, thick, current_color)
+                #Wall W
                 if cell_value & 8:
-                    for thick_x in range(thick):
-                        for pixel_y in range(y, (y + self.block_size)):
-                            self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x + thick_x, pixel_y, self.wall_colors[self.color_index])
-       
+                    self.draw_rect(x, y, thick, self.block_size, current_color)
 
+        #if self.show_path:
+         #   for row, col in self.path:
+          #      x = col * self.block_size
+           #     y = row * self.block_size
+            #    self.draw_block(x, y, 0xFF289D8C)
+        
+        #start_row, start_col = self.start
+        #start_x = start_col * self.block_size
+        #start_y = start_row * self.block_size
+        #self.draw_block(start_x, start_y, 0xF500FF00)
+        
+        #end_row, end_col = self.end
+        #end_x = end_col * self.block_size
+        #end_y = end_row * self.block_size
+        #self.draw_block(end_x, end_y, 0xFFFF0000)
+
+        #for row in range(len(self.grid)):
+         #   for col in range(len(self.grid[row])):
+          #      x = col * self.block_size
+           #     y = row * self.block_size
+            #    cell_value = self.grid[row][col]
+        
+
+             #   if cell_value == 15:
+              #      self.draw_block(x, y, 0xFFD3D3D3)
+
+               # if cell_value & 1:
+                #    for thick_y in range(thick):
+                 #       for pixel_x in range(x, (x + self.block_size)):
+                  #          self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y + thick_y, self.wall_colors[self.color_index])
+                #if cell_value & 2:
+                 #   for thick_x in range(thick):
+                  #      for pixel_y in range(y, (y + self.block_size)):
+                   #         self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x - 1 - thick_x + self.block_size, pixel_y, self.wall_colors[self.color_index])        
+                #if cell_value & 4:
+                 #   for thick_y in range(thick):
+                  #      for pixel_x in range(x, (x + self.block_size)):
+                   #         self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y - 1 - thick_y + self.block_size, self.wall_colors[self.color_index])
+                #if cell_value & 8:
+                  #  for thick_x in range(thick):
+                   #     for pixel_y in range(y, (y + self.block_size)):
+                    #        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x + thick_x, pixel_y, self.wall_colors[self.color_index])
     def draw_maze_hook(self, *args: Any) -> int:
         if self.needs_update is True:
             self.draw_maze()
