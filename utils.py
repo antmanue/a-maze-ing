@@ -10,6 +10,7 @@ class Cell:
         self.north = self.calculate_bit(0)
         self.x = x
         self.y = y
+        self.coord = (self.x, self.y)
 
     def calculate_bit(self, bit_pos: int) -> int:
         bit_weigth = 8
@@ -87,26 +88,42 @@ class Directions:
         raise ValueError("Directions:between() - No walls in between "
                          f"{(orig.y, orig.x)} and {(dest.y, dest.x)}")
 
+    def get_orientation(self, direction: int):
+        orientation = ["N", "E", "S", "W"]
+        return orientation[direction]
+
 
 class Neighbour:
-    def __init__(self, x: int, y: int, direction: int) -> None:
-        self.x = self.set_x(x, direction)
-        self.y = self.set_y(y, direction)
+    def __init__(self, cell: Cell, direction: int) -> None:
+        self.cell = cell
+        # self.x = self.set_x(x, direction)
+        # self.y = self.set_y(y, direction)
+        self.x = self.set_x(direction)
+        self.y = self.set_y(direction)
+        self.coord = (self.x, self.y)
 
-    def set_x(self, x: int, direction: int) -> int:
+    # def set_x(self, x: int, direction: int) -> int:
+    def set_x(self, direction: int) -> int:
         dir = Directions()
         if direction == dir.east:
-            return x + 1
+            return self.cell.x + 1
+            # return x + 1
         elif direction == dir.west:
-            return x - 1
+            return self.cell.x - 1
+            # return x - 1
         else:
-            return x
+            return self.cell.x
+            # return x
 
-    def set_y(self, y: int, direction: int) -> int:
+    # def set_y(self, y: int, direction: int) -> int:
+    def set_y(self, direction: int) -> int:
         dir = Directions()
         if direction == dir.north:
-            return y - 1
+            return self.cell.y - 1
+            # return y - 1
         elif direction == dir.south:
-            return y + 1
+            return self.cell.y + 1
+            # return y + 1
         else:
-            return y
+            return self.cell.y
+            # return y

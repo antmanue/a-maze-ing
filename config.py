@@ -45,6 +45,7 @@ class Config:
         exit = config["EXIT"].split(',')
         self.exit = (self.validate_int("EXIT", exit[0]),
                      self.validate_int("EXIT", exit[1]))
+        self.validate_entry_exit()
         self.output_file = self.validate_str("OUTPUT_FILE",
                                              config["OUTPUT_FILE"])
         self.perfect = self.validate_bool("PERFECT", config["PERFECT"])
@@ -63,7 +64,7 @@ class Config:
                                    "negative <int>"))
         except (ValueError, ConfigError, TypeError) as err:
             self.valid = False
-            print(f"Error found in '{key}' at '{self.file_name}': {err}")
+            print(f"Error found in '{key}' at '{self.file_name}': {err}.")
             # raise ConfigError(f"Error found in '{key}' at "
             #                   f"'{self.file_name}': {err}") from err
         return arg
@@ -74,7 +75,7 @@ class Config:
             arg = str(value)
         except (ValueError, ConfigError, TypeError) as err:
             self.valid = False
-            print(f"Error found in '{key}' at '{self.file_name}': {err}")
+            print(f"Error found in '{key}' at '{self.file_name}': {err}.")
             # raise ConfigError(f"Error found in '{key}' at "
             #                   f"'{self.file_name}': {err}") from err
         return arg
@@ -86,10 +87,19 @@ class Config:
             arg = bool(value)
         except (ValueError, ConfigError, TypeError) as err:
             self.valid = False
-            print(f"Error found in '{key}' at '{self.file_name}': {err}")
+            print(f"Error found in '{key}' at '{self.file_name}': {err}.")
             # raise ConfigError(f"Error found in '{key}' at "
             #                   f"'{self.file_name}': {err}") from err
         return arg
+
+    def validate_entry_exit(self) -> None:
+        try:
+            if self.exit == self.entry:
+                raise ConfigError("'ENTRY' and 'EXIT' must be different.")
+        except ConfigError as err:
+            self.valid = False
+            print(f"Error found in 'ENTRY'/'EXIT' at "
+                  f"'{self.file_name}': {err}")
 
     @staticmethod
     def bool_str(s: str) -> str:
