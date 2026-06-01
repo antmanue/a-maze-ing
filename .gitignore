@@ -1,0 +1,8 @@
+# Virtual Environment
+venv/
+
+# Ignore cache
+__pycache__/
+
+# Ignore output files
+maze.txt

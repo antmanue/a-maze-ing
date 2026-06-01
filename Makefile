@@ -1,12 +1,17 @@
-install: ## Install linters
-	pip install mypy
-	pip install flake8
+all: venv install run
 
-venv: ## Creates virtual environment to isolate dependencies
+venv: ## 1. Creates virtual environment to isolate dependencies
 	python3 -m venv venv
 	@echo "Activate with: source venv/bin/activate"
 
-run:
+install: ## 2. DONT FORGET TO ACTIVATE IT FIRST. Install linters
+	pip install mypy
+	pip install flake8
+	pip install mlx-2.2-py3-none-any.whl
+	python3 -c "from mlx import Mlx; print('MLX OK')"
+
+run: ## Run
+	python3 a_maze_ing.py config.txt
 
 debug:
 
@@ -14,11 +19,12 @@ clean: ## Delete all bytecode (.pyc) that is stored inside __pycache__ and remov
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
 	rm -rf venv
+	rm maze.txt
 
 lint:
 	flake8 . --exclude=venv
 	mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 
 lint-strict:
-	flake8 .
+	flake8 . --exclude=venv
 	mypy . --strict
