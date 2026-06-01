@@ -5,7 +5,7 @@ import config as conf
 import utils
 import random as rand
 import sys
-# from mazegen.display import MazeDisplay
+from mazegen.display import MazeDisplay
 
 
 class MazeGenerator:
@@ -13,11 +13,9 @@ class MazeGenerator:
         self.width = config.width
         self.height = config.height
         # self.entry = config.entry
-        self.entry = (rand.randrange(0, self.width),
-                      rand.randrange(0, self.height))
+        self.entry = None
         # self.exit = config.exit
-        self.exit = (rand.randrange(0, self.width),
-                     rand.randrange(0, self.height))
+        self.exit = None
         self.output_file = config.output_file
         self.perfect = config.perfect
         self.rows: list[list[utils.Cell]] = []
@@ -36,6 +34,7 @@ class MazeGenerator:
         return '\n'.join([self.map_hex, self.path, self.draw_map()])
 
     def setup(self) -> None:
+        self.generate_random_entry_exit()   # Testing purposes only
         self.generate_empty_map()
         self.initial_state += self.generate_hex() + '\n'
         self.initial_state += self.draw_map()
@@ -45,6 +44,12 @@ class MazeGenerator:
         self.map_hex = self.generate_hex()
         self.generate_path()
         self.generate_output()
+
+    def generate_random_entry_exit(self):
+        self.entry = (rand.randrange(0, self.width),
+                 rand.randrange(0, self.height))
+        self.exit = (rand.randrange(0, self.width),
+                rand.randrange(0, self.height))
 
     def generate_empty_map(self):
         for y in range(self.height):
@@ -480,16 +485,20 @@ def main() -> None:
 
     # print("\n------------------------\n")
     # test_all_walls_synced(maze)
-    # grid: list[list[int]] = []
-    # for row in maze.rows:
-    #     line: list[int] = []
-    #     grid.append(line)
-    #     for cell in row:
-    #         line.append(cell.value)
+    grid: list[list[int]] = []
+    for row in maze.rows:
+        line: list[int] = []
+        grid.append(line)
+        for cell in row:
+            line.append(cell.value)
+    path: list[tuple[int, int]] = []
+    for cell in maze.solution:
+        path.append(cell.coord)
+    print(f"Entry: {maze.entry} | Exit {maze.exit}")
 
-    # display = MazeDisplay(grid)
-    # display.render_terminal()
-    # display.run()
+    display = MazeDisplay(grid, maze.entry, maze.exit, path)
+    display.render_terminal()
+    display.run()
 
 
 def test_map_regen(maze: MazeGenerator) -> None:
