@@ -178,48 +178,6 @@ class MazeDisplay:
                 if cell_value & 8:
                     self.draw_rect(x, y, thick, self.block_size, current_color)
 
-        #if self.show_path:
-         #   for row, col in self.path:
-          #      x = col * self.block_size
-           #     y = row * self.block_size
-            #    self.draw_block(x, y, 0xFF289D8C)
-        
-        #start_row, start_col = self.start
-        #start_x = start_col * self.block_size
-        #start_y = start_row * self.block_size
-        #self.draw_block(start_x, start_y, 0xF500FF00)
-        
-        #end_row, end_col = self.end
-        #end_x = end_col * self.block_size
-        #end_y = end_row * self.block_size
-        #self.draw_block(end_x, end_y, 0xFFFF0000)
-
-        #for row in range(len(self.grid)):
-         #   for col in range(len(self.grid[row])):
-          #      x = col * self.block_size
-           #     y = row * self.block_size
-            #    cell_value = self.grid[row][col]
-        
-
-             #   if cell_value == 15:
-              #      self.draw_block(x, y, 0xFFD3D3D3)
-
-               # if cell_value & 1:
-                #    for thick_y in range(thick):
-                 #       for pixel_x in range(x, (x + self.block_size)):
-                  #          self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y + thick_y, self.wall_colors[self.color_index])
-                #if cell_value & 2:
-                 #   for thick_x in range(thick):
-                  #      for pixel_y in range(y, (y + self.block_size)):
-                   #         self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x - 1 - thick_x + self.block_size, pixel_y, self.wall_colors[self.color_index])        
-                #if cell_value & 4:
-                 #   for thick_y in range(thick):
-                  #      for pixel_x in range(x, (x + self.block_size)):
-                   #         self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,pixel_x, y - 1 - thick_y + self.block_size, self.wall_colors[self.color_index])
-                #if cell_value & 8:
-                  #  for thick_x in range(thick):
-                   #     for pixel_y in range(y, (y + self.block_size)):
-                    #        self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr,x + thick_x, pixel_y, self.wall_colors[self.color_index])
     def draw_maze_hook(self, *args: Any) -> int:
         if self.needs_update is True:
             self.draw_maze()
