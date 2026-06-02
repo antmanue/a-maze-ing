@@ -12,10 +12,12 @@ class MazeGenerator:
     def __init__(self, config: conf.Config, hex_map: str = "") -> None:
         self.width = config.width
         self.height = config.height
-        # self.entry = config.entry
-        self.entry = None
+        # self.entry = config.entry # Original use
         # self.exit = config.exit
+        self.entry = None  # Testing random entries
         self.exit = None
+        # self.entry = (2, 3)  # Fixed entry/exit
+        # self.exit = (1, 3)
         self.output_file = config.output_file
         self.perfect = config.perfect
         self.rows: list[list[utils.Cell]] = []
@@ -34,8 +36,8 @@ class MazeGenerator:
         return '\n'.join([self.map_hex, self.path, self.draw_map()])
 
     def setup(self) -> None:
-        self.generate_random_entry_exit()   # Testing purposes only
-        self.generate_empty_map()
+        # self.generate_random_entry_exit()   # Testing purposes only
+        self.generate_map()
         self.initial_state += self.generate_hex() + '\n'
         self.initial_state += self.draw_map()
         self.enclose_map()
@@ -51,7 +53,15 @@ class MazeGenerator:
         self.exit = (rand.randrange(0, self.width),
                      rand.randrange(0, self.height))
 
-    def generate_empty_map(self):
+    def generate_map(self) -> None:
+        hex_str = self.map_hex
+        if hex_str:
+            rows = self.hex_str_to_value_list(hex_str)
+            self.generate_map_from_hex(rows)
+        else:
+            self.generate_map_from_config()
+
+    def generate_map_from_config(self) -> None:
         for y in range(self.height):
             columns: list[utils.Cell] = []
             self.rows.append(columns)
@@ -59,6 +69,24 @@ class MazeGenerator:
                 value = 0
                 cell = utils.Cell(value, x, y)
                 columns.append(cell)
+
+    def generate_map_from_hex(self, values: list[list[int]]) -> None:
+        for y in range(len(values)):
+            columns: list[utils.Cell] = []
+            self.rows.append(columns)
+            for x in range(len(values[0])):
+                value = values[y][x]
+                cell = utils.Cell(value, x, y)
+                columns.append(cell)
+
+    def hex_str_to_value_list(self, hex_str: str) -> list[list[int]]:
+        hex_rows: list[list[int]] = []
+        for row in hex_str.split('\n'):
+            hex_row: list[int] = []
+            hex_rows.append(hex_row)
+            for char in row:
+                hex_row.append(int(char, 16))
+        return hex_rows
 
     def enclose_map(self) -> None:
         for row in self.rows:
@@ -485,8 +513,9 @@ def main() -> None:
         return
     print(f"\n--- Reading {file}")
     config.print()
+    # hex_map = "b93d3\nc2c3a\n9696a\nabed2\nc4556"  # NENWNWSSWSSEN
+    # maze = MazeGenerator(config, hex_map)
     maze = MazeGenerator(config)
-    # maze = MazeGenerator(config)
     print(f"\n--- Creating maze based on {file} data")
 
     print("- Maze initial map")
