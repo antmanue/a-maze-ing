@@ -12,10 +12,12 @@ class MazeGenerator:
     def __init__(self, config: conf.Config, hex_map: str = "") -> None:
         self.width = config.width
         self.height = config.height
-        # self.entry = config.entry
-        self.entry = None
+        # self.entry = config.entry # Original use
         # self.exit = config.exit
-        self.exit = None
+        self.entry = self.generate_random_entry_exit()  # Test random entries
+        self.exit = self.generate_random_entry_exit()
+        # self.entry = (2, 1)  # Fixed entry/exit
+        # self.exit = (1, 1)
         self.output_file = config.output_file
         self.perfect = config.perfect
         self.rows: list[list[utils.Cell]] = []
@@ -25,17 +27,17 @@ class MazeGenerator:
         self.path = ""
         self.paths: list[list[utils.Cell]] = []
         self.current_solution: list[utils.Cell] = []
-        self.current_choices: list[int] = []
         self.visited: list[utils.Cell] = []
-        self.iters = 0
+        # self.iters = 0
+        self.logo_42: list[tuple[int, int]] = []
         self.setup()
 
     def __str__(self) -> str:
         return '\n'.join([self.map_hex, self.path, self.draw_map()])
 
     def setup(self) -> None:
-        self.generate_random_entry_exit()   # Testing purposes only
-        self.generate_empty_map()
+        # self.generate_random_entry_exit()   # Testing purposes only
+        self.generate_map()
         self.initial_state += self.generate_hex() + '\n'
         self.initial_state += self.draw_map()
         self.enclose_map()
@@ -45,20 +47,108 @@ class MazeGenerator:
         self.generate_path()
         self.generate_output()
 
-    def generate_random_entry_exit(self):
-        self.entry = (rand.randrange(0, self.width),
-                 rand.randrange(0, self.height))
-        self.exit = (rand.randrange(0, self.width),
-                rand.randrange(0, self.height))
+    def generate_random_entry_exit(self) -> tuple[int, int]:
+        res = (rand.randrange(0, self.width),
+               rand.randrange(0, self.height))
+        return res
 
-    def generate_empty_map(self):
+    def generate_42(self) -> None:
+        min_height = 5
+        min_width = 7
+        four: list[tuple[int, int]] = []
+        two: list[tuple[int, int]] = []
+        logo: list[tuple[int, int]] = []
+        forbiden: list[tuple[int, int]] = []
+        if self.width > min_width and self.height > min_height:
+            half = int(self.height / 2)
+            center_y = half
+
+            half = int(self.width / 2)
+            center_x = half
+
+            four = self.generate_4(center_x, center_y)
+            two = self.generate_2(center_x, center_y)
+
+            logo.extend(four)
+            logo.extend(two)
+            forbiden.extend([(center_x + 1, center_y - 1),
+                             (center_x + 3, center_y + 1)])
+        for x, y in logo:
+            self.logo_42.append((x, y))
+            print(f"({y}, {x}), ", end='')
+        print()
+        self.draw_42(forbiden)
+
+    def draw_42(self, forbidden: list[tuple[int, int]]) -> None:
+        min_height = 5
+        min_width = 7
+        try:
+            for x, y in self.logo_42:
+                cell = self.get_cell(x, y)
+                self.visited.append(cell)
+                if self.exit in (forbidden):
+                    raise conf.ConfigError("'EXIT' position will lead "
+                                           "to isolated cells")
+                elif self.exit in self.logo_42 or self.entry in self.logo_42:
+                    raise conf.ConfigError("'ENTRY'/'EXIT' will overwrite "
+                                           "42 pattern")
+                elif self.height <= min_height + 1:
+                    raise conf.ConfigError("Labirinth size is too small")
+                elif self.width <= min_width + 1:
+                    raise conf.ConfigError("Labirinth size is too small")
+                for direction in range(4):
+                    self.update_wall(cell, direction, 1)
+        except conf.ConfigError as err:
+            self.visited.clear()
+            print(f"[Warning] 42 pattern ommited due to forbidden "
+                  f"placement: {err}.")
+
+    def generate_4(self, center_x: int,
+                   center_y: int) -> list[tuple[int, int]]:
+        return [(center_x - 3, center_y - 2), (center_x - 3, center_y - 1),
+                (center_x - 3, center_y), (center_x - 2, center_y),
+                (center_x - 1, center_y), (center_x - 1, center_y + 1),
+                (center_x - 1, center_y + 2)]
+
+    def generate_2(self, center_x: int,
+                   center_y: int) -> list[tuple[int, int]]:
+        return [(center_x + 1, center_y - 2), (center_x + 2, center_y - 2),
+                (center_x + 3, center_y - 2), (center_x + 3, center_y - 1),
+                (center_x + 3, center_y), (center_x + 2, center_y),
+                (center_x + 1, center_y), (center_x + 1, center_y + 1),
+                (center_x + 1, center_y + 2), (center_x + 2, center_y + 2),
+                (center_x + 3, center_y + 2)]
+
+    def generate_map(self) -> None:
+        hex_str = self.map_hex
+        rows: list[list[int]] = []
+        if hex_str:
+            rows = self.hex_str_to_value_list(hex_str)
+            self.height = len(rows)
+            self.width = len(rows[0])
+        self.generate_map_from_config(rows)
+        self.generate_42()
+
+    def generate_map_from_config(self, values: list[list[int]] = []) -> None:
         for y in range(self.height):
             columns: list[utils.Cell] = []
             self.rows.append(columns)
             for x in range(self.width):
-                value = 0
+                if self.map_hex:
+                    value = values[y][x]    # Cell based on hex_map provided
+                else:
+                    value = 0   # Create empty cells
                 cell = utils.Cell(value, x, y)
                 columns.append(cell)
+
+    def hex_str_to_value_list(self, hex_str: str) -> list[list[int]]:
+        hex_rows: list[list[int]] = []
+        for row in hex_str.split('\n'):
+            hex_row: list[int] = []
+            hex_rows.append(hex_row)
+            for char in row:
+                hex_row.append(int(char, 16))
+        return hex_rows
 
     def enclose_map(self) -> None:
         for row in self.rows:
@@ -265,32 +355,41 @@ class MazeGenerator:
         self.validate_walls(curr)   # Sync with existing walls
         # print(f"Validated: {curr.get_bits()}")
         # bit = curr.calculate_bit
-        for direction in range(dir.west + 1):  # Leave blank path between prev curr next
+        for direction in range(dir.west + 1):  # Clear between prev curr next
             # print(f"dir: {direction}")
             wall_curr_next = dir.between(curr, next)
-            if (next.x, next.y) == self.exit:   # When finding exit, isolate it to ensure only path
+            if (next.x, next.y) == self.exit:   # Isolate path to exit
                 # print(f"        Updating next: {next.get_bits()}")
                 if direction != dir.opposite(wall_curr_next):
                     # print(f"        Raising wall {direction}")
                     self.update_wall(next, direction, 1)
                 # print(f"        Updating next: {next.get_bits()}")
             if not curr.calculate_bit(direction):
-                # print(f"dir: {direction} (bit: {curr.calculate_bit(direction)}) | wall_curr_next: {wall_curr_next} (bit: {curr.calculate_bit(wall_curr_next)})")
+                # print(f"dir: {direction} (bit: "
+                #       f"{curr.calculate_bit(direction)}) | wall_curr_next: "
+                #       f"{wall_curr_next} (bit: "
+                #       f"{curr.calculate_bit(wall_curr_next)})")
                 if curr == prev:
                     if direction != wall_curr_next:
                         self.update_wall(curr, direction, 1)
                 else:
                     wall_curr_prev = dir.between(curr, prev)
-                    # print(f"curr_prev: {wall_curr_prev} - {curr.calculate_bit(wall_curr_prev)}")
+                    # print(f"curr_prev: {wall_curr_prev} - "
+                    #       f"{curr.calculate_bit(wall_curr_prev)}")
                     if direction not in [wall_curr_prev, wall_curr_next]:
                         # neigh = utils.Neighbour(curr.x, curr.y, direction)
                         neigh = utils.Neighbour(curr, direction)
-                        print(f"Updating cell {curr.coord} for direction {direction}")
-                        visited = not all(node.coord != neigh.coord for node in self.visited)
+                        print(f"Updating cell {curr.coord} for direction "
+                              f"{direction}")
+                        visited = not all(node.coord != neigh.coord
+                                          for node in self.visited)
                         if visited:
                             continue
                         self.update_wall(curr, direction, 1)
-                # print(f"dir: {direction} (bit: {curr.calculate_bit(direction)}) | wall_curr_next: {wall_curr_next} (bit: {curr.calculate_bit(wall_curr_next)})")
+                # print(f"dir: {direction} "
+                #       f"(bit: {curr.calculate_bit(direction)}) | "
+                #       f"wall_curr_next: {wall_curr_next} (bit: "
+                #       f"{curr.calculate_bit(wall_curr_next)})")
             else:
                 if direction == wall_curr_next:
                     self.update_wall(curr, direction, 0)
@@ -303,7 +402,7 @@ class MazeGenerator:
         dir = utils.Directions()
         neigh = utils.Neighbour(cell, wall)
         if self.within_map(neigh.x, neigh.y):
-            print(f"Removing wall {wall} from {(cell.y, cell.x)}")
+            # print(f"Removing wall {wall} from {(cell.y, cell.x)}")
             # print(f"Neighbour: ({neigh.y}, {neigh.x})")
             # print(f"Visited - {len(self.visited)}:")
             # for node in self.visited:
@@ -315,7 +414,7 @@ class MazeGenerator:
             self.enforce_shared_wall(cell, dir.opposite(wall),
                                      self.rows[neigh.y][neigh.x])
 
-    def connect_cell(self, cell: utils.Cell) -> bool:
+    def connect_cell(self, cell: utils.Cell, solution: bool = False) -> bool:
         dir = utils.Directions()
         walls: list[int] = []
         # checked: list[int] = []
@@ -325,33 +424,49 @@ class MazeGenerator:
         rand.shuffle(walls)
         for wall in walls:
             neigh = utils.Neighbour(cell, wall)
-            print(f"Trying to remove wall {wall} from {(cell.y, cell.x)} | ({neigh.y}, {neigh.x})")
+            # print(f"Trying to remove wall {wall} from {(cell.y, cell.x)} | "
+            #       f"({neigh.y}, {neigh.x})")
             # if wall in checked:
             if self.within_map(neigh.x, neigh.y):
+                if solution:
+                    solutions = self.paths
+                    if self.get_cell(neigh.x, neigh.y) not in solutions[0]:
+                        continue
                 if (neigh.x, neigh.y) != self.exit:
-                    self.update_wall(cell, wall, 0)
-                    return True
+                    if (neigh.x, neigh.y) not in self.logo_42:
+                        self.update_wall(cell, wall, 0)
+                        return True
             # checked.append(wall)
         return False
 
-    def connect_to_path(self, path: list[utils.Cell]) -> None:
+    def connect_to_path(self, path: list[utils.Cell],
+                        solut_path: bool = False) -> None:
         while path:
-            print(f"    Path cells: {len(path)}")
+            # print(f"    Path cells: {len(path)}")
             cell = rand.choice(path)
-            removed = self.connect_cell(cell)
-            # path_to_merge = -1
-            # for solution in self.paths:
-            #     if cell in solution:
-            #         path_to_merge = self.paths.index(solution)
-            # path.extend(self.paths[path_to_merge])
-            # self.paths.pop(path_to_merge)
+            removed = self.connect_cell(cell, solut_path)
             for i, solution in enumerate(self.paths):
-                print(f"Solution [{i + 1}]: {[(cell.y, cell.x) for cell in solution]}")
+                print(f"Solution [{i}]/[{len(self.paths)}] - "
+                      f"{len(solution)}: ")
+                #   f"{[(cell.y, cell.x) for cell in solution]}")
             if removed:
+                if solut_path:
+                    path = self.paths[0]
+                path_to_merge = -1
+                for solution in self.paths:
+                    if cell in solution:
+                        path_to_merge = self.paths.index(solution)
+                path.extend(self.paths[path_to_merge])
+                self.paths.pop(path_to_merge)
+                print(f"NEW_Solution: {[(cell.y, cell.x) for cell in path]}")
+                print(f"{len(self.paths[0])}/{len(self.visited)}: "
+                      f"{[(cell.y, cell.x) for cell in self.visited if cell not in self.paths[0]]}")
                 break
             path.remove(cell)
 
     def connect_paths(self) -> None:
+        print(f"{len(self.visited)} cells visited out of "
+              f"{len(self.rows) * len(self.rows[0])}")
         for i, path in enumerate(self.paths[1:]):
             print()
             print(f"Solution [{i + 1}] - {len(path)}:")
@@ -362,15 +477,15 @@ class MazeGenerator:
                 for direction in range(4):
                     neigh = utils.Neighbour(cell, direction)
                     if self.within_map(neigh.x, neigh.y):
-                        if self.rows[neigh.y][neigh.x] in self.paths[0]:
-                            connectable_cells.append(cell)
-                            break
-            print(f"Connectable cells: {len(connectable_cells)}")
+                        if self.get_cell(neigh.x, neigh.y).coord != self.exit:
+                            if self.rows[neigh.y][neigh.x] in self.paths[0]:
+                                connectable_cells.append(cell)
+                                break
+            # print(f"Connectable cells: {len(connectable_cells)}")
             if not connectable_cells:
                 self.connect_to_path(path)
             else:
-                self.connect_to_path(connectable_cells)
-
+                self.connect_to_path(connectable_cells, True)
 
     def find_path(self) -> None:
         x, y = self.entry
@@ -389,14 +504,14 @@ class MazeGenerator:
         Add cell to path, draw and sync neighbours,
         remove if leads to dead end and repeat
         """
-        # self.iters += 1     # [For Testing Only] Avoid infinite loop if something goes wrong
-        # if self.iters > 20:
+        # self.iters += 1     # [Testing Only] Avoid infinite loop if
+        # if self.iters > 20: # something goes wrong
         #     return
         if len(self.current_solution) > 0:
             prev = self.current_solution[-1]
         self.visited.append(curr)
         self.current_solution.append(curr)
-        if (curr.x, curr.y) == self.exit and len(self.paths) == 0:   # If it is the exit, finishes (It should save the path instead and finish the map)
+        if (curr.x, curr.y) == self.exit and len(self.paths) == 0:
             self.paths.append(self.current_solution.copy())
             self.solution = self.current_solution.copy()
             print("Solution found")
@@ -417,8 +532,6 @@ class MazeGenerator:
                 print()
                 print(f"            choice: {(choice.y, choice.x)}")
                 self.draw_walls(prev, curr, choice)
-                if len(free) > 1:
-                    self.current_choices.append(len(self.current_solution) - 1)
                 back(self.rows[choice.y][choice.x], curr)
                 if len(self.paths) > 0:
                     if len(self.current_solution) > 0:
@@ -429,7 +542,8 @@ class MazeGenerator:
                 # print("Free: "
                 #       f"{[(cell.y, cell.x) for cell in free]}")
                 # print("visited: "
-                #       f"{[(cell.y, cell.x) for cell in self.current_solution]}")
+                #       f"{[(cell.y, cell.x) for
+                #           cell in self.current_solution]}")
                 free = [cell for cell in free if cell not in self.visited]
                 print()
                 print(f"         Removing {(choice.y, choice.x)}")
@@ -458,8 +572,9 @@ def main() -> None:
         return
     print(f"\n--- Reading {file}")
     config.print()
+    # hex_map = "b93d3\nc2c3a\n9696a\nabed2\nc4556"  # NENWNWSSWSSEN
+    # maze = MazeGenerator(config, hex_map)
     maze = MazeGenerator(config)
-    # maze = MazeGenerator(config)
     print(f"\n--- Creating maze based on {file} data")
 
     print("- Maze initial map")
@@ -485,20 +600,20 @@ def main() -> None:
 
     # print("\n------------------------\n")
     # test_all_walls_synced(maze)
-    grid: list[list[int]] = []
-    for row in maze.rows:
-        line: list[int] = []
-        grid.append(line)
-        for cell in row:
-            line.append(cell.value)
-    path: list[tuple[int, int]] = []
-    for cell in maze.solution:
-        path.append(cell.coord)
-    print(f"Entry: {maze.entry} | Exit {maze.exit}")
+    # grid: list[list[int]] = []
+    # for row in maze.rows:
+    #     line: list[int] = []
+    #     grid.append(line)
+    #     for cell in row:
+    #         line.append(cell.value)
+    # path: list[tuple[int, int]] = []
+    # for cell in maze.solution:
+    #     path.append(cell.coord)
+    # print(f"Entry: {maze.entry} | Exit {maze.exit}")
 
-    display = MazeDisplay(grid, maze.entry, maze.exit, path)
-    display.render_terminal()
-    display.run()
+    # display = MazeDisplay(grid, maze.entry, maze.exit, path)
+    # display.render_terminal()
+    # display.run()
 
 
 def test_map_regen(maze: MazeGenerator) -> None:
