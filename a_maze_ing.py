@@ -61,23 +61,18 @@ class MazeGenerator:
         forbiden: list[tuple[int, int]] = []
         if self.width > min_width and self.height > min_height:
             half = int(self.height / 2)
-            if self.height % 2 == 0:
-                center_y = half - 1
-            else:
-                center_y = half + 1
+            center_y = half
 
             half = int(self.width / 2)
-            if self.width % 2 == 0:
-                center_x = half - 1
-            else:
-                center_x = half + 1
+            center_x = half
 
             four = self.generate_4(center_x, center_y)
             two = self.generate_2(center_x, center_y)
 
             logo.extend(four)
             logo.extend(two)
-            forbiden.extend([(center_x + 1, center_y - 1), (center_x + 3, center_y + 1)])
+            forbiden.extend([(center_x + 1, center_y - 1),
+                             (center_x + 3, center_y + 1)])
         for x, y in logo:
             self.logo_42.append((x, y))
             print(f"({y}, {x}), ", end='')
@@ -407,7 +402,7 @@ class MazeGenerator:
         dir = utils.Directions()
         neigh = utils.Neighbour(cell, wall)
         if self.within_map(neigh.x, neigh.y):
-            print(f"Removing wall {wall} from {(cell.y, cell.x)}")
+            # print(f"Removing wall {wall} from {(cell.y, cell.x)}")
             # print(f"Neighbour: ({neigh.y}, {neigh.x})")
             # print(f"Visited - {len(self.visited)}:")
             # for node in self.visited:
