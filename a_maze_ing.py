@@ -14,10 +14,10 @@ class MazeGenerator:
         self.height = config.height
         # self.entry = config.entry # Original use
         # self.exit = config.exit
-        self.entry = None  # Testing random entries
-        self.exit = None
-        # self.entry = (2, 3)  # Fixed entry/exit
-        # self.exit = (1, 3)
+        self.entry = self.generate_random_entry_exit()  # Test random entries
+        self.exit = self.generate_random_entry_exit()
+        # self.entry = (2, 1)  # Fixed entry/exit
+        # self.exit = (1, 1)
         self.output_file = config.output_file
         self.perfect = config.perfect
         self.rows: list[list[utils.Cell]] = []
@@ -27,9 +27,9 @@ class MazeGenerator:
         self.path = ""
         self.paths: list[list[utils.Cell]] = []
         self.current_solution: list[utils.Cell] = []
-        self.current_choices: list[int] = []
         self.visited: list[utils.Cell] = []
-        self.iters = 0
+        # self.iters = 0
+        self.logo_42: list[tuple[int, int]] = []
         self.setup()
 
     def __str__(self) -> str:
@@ -47,35 +47,102 @@ class MazeGenerator:
         self.generate_path()
         self.generate_output()
 
-    def generate_random_entry_exit(self):
-        self.entry = (rand.randrange(0, self.width),
-                      rand.randrange(0, self.height))
-        self.exit = (rand.randrange(0, self.width),
-                     rand.randrange(0, self.height))
+    def generate_random_entry_exit(self) -> tuple[int, int]:
+        res = (rand.randrange(0, self.width),
+               rand.randrange(0, self.height))
+        return res
+
+    def generate_42(self) -> None:
+        min_height = 5
+        min_width = 7
+        four: list[tuple[int, int]] = []
+        two: list[tuple[int, int]] = []
+        logo: list[tuple[int, int]] = []
+        forbiden: list[tuple[int, int]] = []
+        if self.width > min_width and self.height > min_height:
+            half = int(self.height / 2)
+            if self.height % 2 == 0:
+                center_y = half - 1
+            else:
+                center_y = half + 1
+
+            half = int(self.width / 2)
+            if self.width % 2 == 0:
+                center_x = half - 1
+            else:
+                center_x = half + 1
+
+            four = self.generate_4(center_x, center_y)
+            two = self.generate_2(center_x, center_y)
+
+            logo.extend(four)
+            logo.extend(two)
+            forbiden.extend([(center_x + 1, center_y - 1), (center_x + 3, center_y + 1)])
+        for x, y in logo:
+            self.logo_42.append((x, y))
+            print(f"({y}, {x}), ", end='')
+        print()
+        self.draw_42(forbiden)
+
+    def draw_42(self, forbidden: list[tuple[int, int]]) -> None:
+        min_height = 5
+        min_width = 7
+        try:
+            for x, y in self.logo_42:
+                cell = self.get_cell(x, y)
+                self.visited.append(cell)
+                if self.exit in (forbidden):
+                    raise conf.ConfigError("'EXIT' position will lead "
+                                           "to isolated cells")
+                elif self.exit in self.logo_42 or self.entry in self.logo_42:
+                    raise conf.ConfigError("'ENTRY'/'EXIT' will overwrite "
+                                           "42 pattern")
+                elif self.height <= min_height + 1:
+                    raise conf.ConfigError("Labirinth size is too small")
+                elif self.width <= min_width + 1:
+                    raise conf.ConfigError("Labirinth size is too small")
+                for direction in range(4):
+                    self.update_wall(cell, direction, 1)
+        except conf.ConfigError as err:
+            self.visited.clear()
+            print(f"[Warning] 42 pattern ommited due to forbidden "
+                  f"placement: {err}.")
+
+    def generate_4(self, center_x: int,
+                   center_y: int) -> list[tuple[int, int]]:
+        return [(center_x - 3, center_y - 2), (center_x - 3, center_y - 1),
+                (center_x - 3, center_y), (center_x - 2, center_y),
+                (center_x - 1, center_y), (center_x - 1, center_y + 1),
+                (center_x - 1, center_y + 2)]
+
+    def generate_2(self, center_x: int,
+                   center_y: int) -> list[tuple[int, int]]:
+        return [(center_x + 1, center_y - 2), (center_x + 2, center_y - 2),
+                (center_x + 3, center_y - 2), (center_x + 3, center_y - 1),
+                (center_x + 3, center_y), (center_x + 2, center_y),
+                (center_x + 1, center_y), (center_x + 1, center_y + 1),
+                (center_x + 1, center_y + 2), (center_x + 2, center_y + 2),
+                (center_x + 3, center_y + 2)]
 
     def generate_map(self) -> None:
         hex_str = self.map_hex
+        rows: list[list[int]] = []
         if hex_str:
             rows = self.hex_str_to_value_list(hex_str)
-            self.generate_map_from_hex(rows)
-        else:
-            self.generate_map_from_config()
+            self.height = len(rows)
+            self.width = len(rows[0])
+        self.generate_map_from_config(rows)
+        self.generate_42()
 
-    def generate_map_from_config(self) -> None:
+    def generate_map_from_config(self, values: list[list[int]] = []) -> None:
         for y in range(self.height):
             columns: list[utils.Cell] = []
             self.rows.append(columns)
             for x in range(self.width):
-                value = 0
-                cell = utils.Cell(value, x, y)
-                columns.append(cell)
-
-    def generate_map_from_hex(self, values: list[list[int]]) -> None:
-        for y in range(len(values)):
-            columns: list[utils.Cell] = []
-            self.rows.append(columns)
-            for x in range(len(values[0])):
-                value = values[y][x]
+                if self.map_hex:
+                    value = values[y][x]    # Cell based on hex_map provided
+                else:
+                    value = 0   # Create empty cells
                 cell = utils.Cell(value, x, y)
                 columns.append(cell)
 
@@ -371,8 +438,9 @@ class MazeGenerator:
                     if self.get_cell(neigh.x, neigh.y) not in solutions[0]:
                         continue
                 if (neigh.x, neigh.y) != self.exit:
-                    self.update_wall(cell, wall, 0)
-                    return True
+                    if (neigh.x, neigh.y) not in self.logo_42:
+                        self.update_wall(cell, wall, 0)
+                        return True
             # checked.append(wall)
         return False
 
@@ -395,11 +463,9 @@ class MazeGenerator:
                         path_to_merge = self.paths.index(solution)
                 path.extend(self.paths[path_to_merge])
                 self.paths.pop(path_to_merge)
-                print(f"NEW_Solution: {[(cell.y, cell.x)
-                                        for cell in path]}")
+                print(f"NEW_Solution: {[(cell.y, cell.x) for cell in path]}")
                 print(f"{len(self.paths[0])}/{len(self.visited)}: "
-                      f"{[(cell.y, cell.x) for cell in self.visited
-                          if cell not in self.paths[0]]}")
+                      f"{[(cell.y, cell.x) for cell in self.visited if cell not in self.paths[0]]}")
                 break
             path.remove(cell)
 
@@ -471,8 +537,6 @@ class MazeGenerator:
                 print()
                 print(f"            choice: {(choice.y, choice.x)}")
                 self.draw_walls(prev, curr, choice)
-                if len(free) > 1:
-                    self.current_choices.append(len(self.current_solution) - 1)
                 back(self.rows[choice.y][choice.x], curr)
                 if len(self.paths) > 0:
                     if len(self.current_solution) > 0:
