@@ -23,7 +23,7 @@ class MazeDisplay:
 
         self.start = start
         self.end = end
-        self.path = path if path is not None else [(0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]
+        self.path = path if path is not None else [(0, 0), (0, 1), (1, 1), (2, 1), (2, 2)]
         
         self.block_size: int = 64
         # Grid
@@ -128,8 +128,8 @@ class MazeDisplay:
             half_block = self.block_size // 2
 
             for i in range (len(self.path) - 1):
-                r1, c1 = self.path[i]
-                r2, c2 = self.path[i+1]
+                c1, r1 = self.path[i]
+                c2, r2 = self.path[i+1]
 
                 cx1 = c1 * self.block_size + half_block
                 cy1 = r1 * self.block_size + half_block
@@ -146,12 +146,12 @@ class MazeDisplay:
         #Layer 3
         half_block = self.block_size // 2
 
-        start_row, start_col = self.start
+        start_col, start_row = self.start
         st_cx = start_col * self.block_size + half_block
         st_cy = start_row * self.block_size + half_block
         self.draw_rect(st_cx - 24, st_cy - 24, 48, 48, 0xFF00FF00)
 
-        end_row, end_col = self.end
+        end_col, end_row = self.end
         ed_cx = end_col * self.block_size + half_block
         ed_cy = end_row * self.block_size + half_block
         self.draw_rect(ed_cx - 24, ed_cy - 24, 48, 48, 0xFFFF0000)

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mazegen"
-version = "1.0"
-description = "Maze vizualizer and genarator"
+version = "1.0.0"
+description = "Maze vizualizer and generator"
 requires-python = ">=3.10"
 readme = "README.md"
 dependencies = []
@@ -13,4 +13,4 @@ authors = [{name = "pedrohe3"}, {name = "antmanue"}]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["mazegen"]
+include = ["mazegen-*"]
