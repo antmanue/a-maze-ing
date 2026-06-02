@@ -10,14 +10,15 @@ from mazegen.display import MazeDisplay
 
 class MazeGenerator:
     def __init__(self, config: conf.Config, hex_map: str = "") -> None:
+        self.seed: str = config.seed
         self.width = config.width
         self.height = config.height
-        # self.entry = config.entry # Original use
-        # self.exit = config.exit
-        self.entry = self.generate_random_entry_exit()  # Test random entries
-        self.exit = self.generate_random_entry_exit()
+        self.entry = config.entry  # Original use
+        self.exit = config.exit
+        # self.entry = self.generate_random_entry_exit()  # Test random entries
+        # self.exit = self.generate_random_entry_exit()
         # self.entry = (2, 1)  # Fixed entry/exit
-        # self.exit = (1, 1)
+        # self.exit = (4, 2)
         self.output_file = config.output_file
         self.perfect = config.perfect
         self.rows: list[list[utils.Cell]] = []
@@ -37,6 +38,7 @@ class MazeGenerator:
 
     def setup(self) -> None:
         # self.generate_random_entry_exit()   # Testing purposes only
+        rand.seed(self.seed)
         self.generate_map()
         self.initial_state += self.generate_hex() + '\n'
         self.initial_state += self.draw_map()
@@ -72,7 +74,9 @@ class MazeGenerator:
             logo.extend(four)
             logo.extend(two)
             forbiden.extend([(center_x + 1, center_y - 1),
-                             (center_x + 3, center_y + 1)])
+                             (center_x, center_y - 1),
+                             (center_x + 3, center_y + 1),
+                             (center_x + 4, center_y + 1)])
         for x, y in logo:
             self.logo_42.append((x, y))
             print(f"({y}, {x}), ", end='')
@@ -379,8 +383,8 @@ class MazeGenerator:
                     if direction not in [wall_curr_prev, wall_curr_next]:
                         # neigh = utils.Neighbour(curr.x, curr.y, direction)
                         neigh = utils.Neighbour(curr, direction)
-                        print(f"Updating cell {curr.coord} for direction "
-                              f"{direction}")
+                        # print(f"Updating cell {curr.coord} for direction "
+                            #   f"{direction}")
                         visited = not all(node.coord != neigh.coord
                                           for node in self.visited)
                         if visited:
@@ -395,8 +399,8 @@ class MazeGenerator:
                     self.update_wall(curr, direction, 0)
             # print(f"Updating: {curr.get_bits()}")
         # print(f"Updated: {curr.get_bits()}")
-        print()
-        print(self.draw_map())
+        # print()
+        # print(self.draw_map())
 
     def update_wall(self, cell: utils.Cell, wall: int, value: int) -> None:
         dir = utils.Directions()
@@ -600,20 +604,21 @@ def main() -> None:
 
     # print("\n------------------------\n")
     # test_all_walls_synced(maze)
-    # grid: list[list[int]] = []
-    # for row in maze.rows:
-    #     line: list[int] = []
-    #     grid.append(line)
-    #     for cell in row:
-    #         line.append(cell.value)
-    # path: list[tuple[int, int]] = []
-    # for cell in maze.solution:
-    #     path.append(cell.coord)
-    # print(f"Entry: {maze.entry} | Exit {maze.exit}")
+    grid: list[list[int]] = []
+    for row in maze.rows:
+        line: list[int] = []
+        grid.append(line)
+        for cell in row:
+            line.append(cell.value)
+    path: list[tuple[int, int]] = []
+    for cell in maze.solution:
+        path.append(cell.coord)
+    print(f"Entry: {maze.entry} | Exit {maze.exit}")
+    print(f"Seed: {maze.seed}")
 
-    # display = MazeDisplay(grid, maze.entry, maze.exit, path)
-    # display.render_terminal()
-    # display.run()
+    display = MazeDisplay(grid, maze.entry, maze.exit, path)
+    display.render_terminal()
+    display.run()
 
 
 def test_map_regen(maze: MazeGenerator) -> None:

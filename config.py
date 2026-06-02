@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import random as rand
+
 
 class Config:
     def __init__(self, file_name: str):
@@ -12,6 +14,8 @@ class Config:
         self.perfect: bool = False
         self.content = self.read_config(file_name)
         self.valid = True
+        self.seed: str = ""
+        self.setup()
 
     def print(self) -> None:
         print(f"WIDTH = {self.width} ({type(self.width)})")
@@ -22,33 +26,45 @@ class Config:
               f"{type(self.exit[1])})")
         print(f"OUTPUT_FILE = {self.output_file} ({type(self.output_file)})")
         print(f"PERFECT = {self.perfect} ({type(self.perfect)})")
+        print(f"SEED = {self.seed} ({type(self.seed)})")
 
     def setup(self) -> None:
         config = self.read_config(self.file_name)
         self.parse_config(config)
+        if not self.seed:
+            self.generate_seed()
 
     def read_config(self, file_name: str) -> dict[str, str]:
         with open(file_name) as file:
             config: dict[str, str] = {}
             for line in file.readlines():
+                if '#' in line[0]:
+                    print("Skipping commented line")
+                    continue
                 line = line.rstrip('\n')
                 key, value = line.split('=')
                 config[key] = value
             return config
 
     def parse_config(self, config: dict[str, str]) -> None:
-        self.width = self.validate_int("WIDTH", config["WIDTH"])
-        self.height = self.validate_int("HEIGHT", config["HEIGHT"])
-        entry = config["ENTRY"].split(',')
-        self.entry = (self.validate_int("ENTRY", entry[0]),
-                      self.validate_int("ENTRY", entry[1]))
-        exit = config["EXIT"].split(',')
-        self.exit = (self.validate_int("EXIT", exit[0]),
-                     self.validate_int("EXIT", exit[1]))
-        self.validate_entry_exit()
-        self.output_file = self.validate_str("OUTPUT_FILE",
-                                             config["OUTPUT_FILE"])
-        self.perfect = self.validate_bool("PERFECT", config["PERFECT"])
+        try:
+            self.width = self.validate_int("WIDTH", config["WIDTH"])
+            self.height = self.validate_int("HEIGHT", config["HEIGHT"])
+            entry = config["ENTRY"].split(',')
+            self.entry = (self.validate_int("ENTRY", entry[0]),
+                          self.validate_int("ENTRY", entry[1]))
+            exit = config["EXIT"].split(',')
+            self.exit = (self.validate_int("EXIT", exit[0]),
+                         self.validate_int("EXIT", exit[1]))
+            self.validate_entry_exit()
+            self.output_file = self.validate_str("OUTPUT_FILE",
+                                                 config["OUTPUT_FILE"])
+            self.perfect = self.validate_bool("PERFECT", config["PERFECT"])
+            if "SEED" in config.keys():
+                self.seed = self.validate_str("SEED", config["SEED"])
+        except KeyError as err:
+            print(f'Error found in {self.file_name}: {err} not found')
+            self.valid = False
         if not self.valid:
             raise ConfigError("Configuration errors found, exiting program.")
 
@@ -73,6 +89,8 @@ class Config:
         arg = ""
         try:
             arg = str(value)
+            if not arg:
+                raise ConfigError(f"{key} is empty")
         except (ValueError, ConfigError, TypeError) as err:
             self.valid = False
             print(f"Error found in '{key}' at '{self.file_name}': {err}.")
@@ -100,6 +118,10 @@ class Config:
             self.valid = False
             print(f"Error found in 'ENTRY'/'EXIT' at "
                   f"'{self.file_name}': {err}")
+
+    def generate_seed(self) -> None:
+        for _ in range(15):
+            self.seed += f'{rand.randrange(16):X}'
 
     @staticmethod
     def bool_str(s: str) -> str:
