@@ -30,7 +30,11 @@ class Config:
 
     def setup(self) -> None:
         config = self.read_config(self.file_name)
-        self.parse_config(config)
+        try:
+            self.parse_config(config)
+        except ConfigError as err:
+            print(err)
+            exit()
         if not self.seed:
             self.generate_seed()
 
@@ -39,7 +43,6 @@ class Config:
             config: dict[str, str] = {}
             for line in file.readlines():
                 if '#' in line[0]:
-                    print("Skipping commented line")
                     continue
                 line = line.rstrip('\n')
                 key, value = line.split('=')

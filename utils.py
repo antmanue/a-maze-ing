@@ -10,6 +10,10 @@ class Cell:
         self.north = self.calculate_bit(0)
         self.x = x
         self.y = y
+        self.f = 0
+        self.g = 0
+        self.h = 0
+        self.parent: Cell | None = None
         self.coord = (self.x, self.y)
 
     def calculate_bit(self, bit_pos: int) -> int:

@@ -20,12 +20,11 @@ class MazeDisplay:
             #[12, 0, 2],
             #[15, 4, 6],
         ]
-
         self.start = start
         self.end = end
         self.path = path if path is not None else [(0, 0), (0, 1), (1, 1), (2, 1), (2, 2)]
         
-        self.block_size: int = 64
+        self.block_size: int = 16
         # Grid
         self.window_width = len(self.grid[0]) * self.block_size
         self.window_height = len(self.grid) * self.block_size
@@ -45,8 +44,8 @@ class MazeDisplay:
         self.m.mlx_loop_hook(self.mlx_ptr, self.draw_maze_hook, 0)
 
         # Walls
-        self.wall_thickness: int = 4
-        self.path_thickness: int = 24
+        self.wall_thickness: int = 1
+        self.path_thickness: int = 6
         self.wall_colors: list[int] = [
             0xFFFFFFFF, #branco
             0xFF00FF00, #verde
@@ -147,14 +146,14 @@ class MazeDisplay:
         half_block = self.block_size // 2
 
         start_col, start_row = self.start
-        st_cx = start_col * self.block_size + half_block
-        st_cy = start_row * self.block_size + half_block
-        self.draw_rect(st_cx - 24, st_cy - 24, 48, 48, 0xFF00FF00)
+        st_cx = start_col * self.block_size
+        st_cy = start_row * self.block_size
+        self.draw_rect(st_cx, st_cy, 12, 12, 0xFF00FF00)
 
         end_col, end_row = self.end
-        ed_cx = end_col * self.block_size + half_block
-        ed_cy = end_row * self.block_size + half_block
-        self.draw_rect(ed_cx - 24, ed_cy - 24, 48, 48, 0xFFFF0000)
+        ed_cx = end_col * self.block_size
+        ed_cy = end_row * self.block_size
+        self.draw_rect(ed_cx, ed_cy, 12, 12, 0xFFFF0000)
 
         #Layer 4
         current_color = self.wall_colors[self.color_index]

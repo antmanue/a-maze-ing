@@ -11,24 +11,26 @@ from mazegen.display import MazeDisplay
 class MazeGenerator:
     def __init__(self, config: conf.Config, hex_map: str = "") -> None:
         self.seed: str = config.seed
+        rand.seed(self.seed)
         self.width = config.width
         self.height = config.height
-        self.entry = config.entry  # Original use
-        self.exit = config.exit
-        # self.entry = self.generate_random_entry_exit()  # Test random entries
-        # self.exit = self.generate_random_entry_exit()
+        # self.entry = config.entry  # Original use
+        # self.exit = config.exit
+        self.entry = self.generate_random_entry_exit()  # Test random entries
+        self.exit = self.generate_random_entry_exit()
         # self.entry = (2, 1)  # Fixed entry/exit
         # self.exit = (4, 2)
         self.output_file = config.output_file
         self.perfect = config.perfect
         self.rows: list[list[utils.Cell]] = []
         self.initial_state = ""
-        self.map_hex = hex_map
+        self.map_hex: str = hex_map
         self.solution: list[utils.Cell] = []
-        self.path = ""
+        self.path: str = ""
         self.paths: list[list[utils.Cell]] = []
         self.current_solution: list[utils.Cell] = []
         self.visited: list[utils.Cell] = []
+        self.unvisited: list[utils.Cell] = []
         # self.iters = 0
         self.logo_42: list[tuple[int, int]] = []
         self.setup()
@@ -38,13 +40,30 @@ class MazeGenerator:
 
     def setup(self) -> None:
         # self.generate_random_entry_exit()   # Testing purposes only
-        rand.seed(self.seed)
+        # rand.seed(self.seed)
         self.generate_map()
         self.initial_state += self.generate_hex() + '\n'
         self.initial_state += self.draw_map()
         self.enclose_map()
+        # print(self.draw_map())
+        # self.update_wall(self.get_cell(2+1, 5+1), 2, 1)
+        # self.update_wall(self.get_cell(2+1, 5+1), 1, 1)
+        # self.update_wall(self.get_cell(2+1, 5-1), 2, 1)
+        # self.update_wall(self.get_cell(2+1, 5-1), 0, 1)
+        # self.update_wall(self.get_cell(2-1, 5+1), 3, 1)
+        # self.update_wall(self.get_cell(2-1, 5+1), 2, 1)
+        # self.update_wall(self.get_cell(2-1, 5-1), 3, 1)
+        # self.update_wall(self.get_cell(2-1, 5-1), 0, 1)
+        # print(f"Corrected? {self.look_for_invalid_neighbours()}")
+        # print(self.draw_map())
+        # exit()
         self.find_path()
         self.connect_paths()
+        if not self.perfect:
+            print("Transforming into imperfect maze")
+            self.transform_to_imperfect_maze()
+            self.look_for_invalid_neighbours()
+            # self.clear_solutions()
         self.map_hex = self.generate_hex()
         self.generate_path()
         self.generate_output()
@@ -233,8 +252,18 @@ class MazeGenerator:
         self.rows.clear()
         self.initial_state = ""
         self.map_hex = ""
+        self.path = ""
+
+    def clear_solutions(self) -> None:
+        self.current_solution.clear()
+        self.paths.clear()
+        self.solution.clear()
+        self.visited.clear()
+        logo_42_cells = [self.get_cell(x, y) for x, y in self.logo_42]
+        self.visited.extend(logo_42_cells)
 
     def regenerate_map(self) -> None:
+        self.clear_solutions()
         self.erase_map()
         self.setup()
 
@@ -326,14 +355,12 @@ class MazeGenerator:
             return False
         return True
 
-    def get_free_neighbours(self, curr: utils.Cell,
-                            prev: utils.Cell) -> list[utils.Cell]:
+    def get_free_neighbours(self, curr: utils.Cell) -> list[utils.Cell]:
         free: list[utils.Cell] = []
         for direction in range(4):
             neighbour = utils.Neighbour(curr, direction)
-            if neighbour.x < 0 or neighbour.x >= self.width:
-                continue
-            elif neighbour.y < 0 or neighbour.y >= self.height:
+
+            if not self.within_map(neighbour.x, neighbour.y):
                 continue
             last_visiteds = reversed(self.visited)
             is_free = True
@@ -400,7 +427,7 @@ class MazeGenerator:
             # print(f"Updating: {curr.get_bits()}")
         # print(f"Updated: {curr.get_bits()}")
         # print()
-        # print(self.draw_map())
+        print(self.draw_map())
 
     def update_wall(self, cell: utils.Cell, wall: int, value: int) -> None:
         dir = utils.Directions()
@@ -502,6 +529,62 @@ class MazeGenerator:
     def get_cell(self, x: int, y: int) -> utils.Cell:
         return self.rows[y][x]
 
+    def transform_to_imperfect_maze(self):
+        size = self.height * self.width
+        remove_amount = int(size * 0.25)
+        for _ in range(remove_amount):
+            x = rand.randrange(self.width)
+            y = rand.randrange(self.height)
+            cell = self.get_cell(x, y)
+            direction = rand.randrange(4)
+            neigh = utils.Neighbour(cell, direction)
+            if cell.coord in self.logo_42 or cell.coord == self.exit:
+                continue
+            elif neigh.coord in self.logo_42:
+                continue
+            self.update_wall(self.get_cell(x, y), direction, 0)
+
+    def look_for_invalid_neighbours(self) -> bool:
+        for y in range(self.height):
+            for x in range(self.width):
+                cell = self.get_cell(x, y)
+                if self.invalid_surrounding_neighbours(cell):
+                    print(f"Correcting {(y, x)}")
+                    self.correct_neighbours(cell)
+                    print(self.draw_map())
+
+    def invalid_surrounding_neighbours(self, cell: utils.Cell) -> bool:
+        corners = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+        values = [9, 3, 12, 6]
+        sides = [(-1, 0), (1, 0), (0, 1), (0, -1)]
+        values_sides = [8, 2, 4, 1]
+        for y in range(-1, 2):
+            for x in range(-1, 2):
+                if self.within_map(cell.x + x, cell.y + y):
+                    neigh = self.rows[cell.y + y][cell.x + x]
+                    if (x, y) in corners:
+                        if neigh.value > values[corners.index((x, y))]:
+                            # print(f"Invalid: {(cell.x + x, cell.y + y)}, value: {neigh.value} > {values[corners.index((x, y))]}")
+                            return False
+                    elif (x, y) in sides:
+                        if neigh.value > values_sides[sides.index((x, y))]:
+                            # print(f"Invalid: {(cell.x + x, cell.y + y)}, value: {neigh.value} > {values[sides.index((x, y))]}")
+                            return False
+                    print(f"Invalid: {(cell.x, cell.y)}, value: {cell.value} > {neigh.value} - {(neigh.x, neigh.y)}")
+                else:
+                    return False
+        return True
+
+    def correct_neighbours(self, cell: utils.Cell) -> bool:
+        for dir in range(4):
+            neigh = utils.Neighbour(cell, dir)
+            if neigh in self.solution:
+                continue
+            else:
+                self.update_wall(cell, dir, 1)
+                return True
+        return False
+
     def backtracking(self, curr: utils.Cell,
                      prev: utils.Cell):
         """
@@ -525,7 +608,7 @@ class MazeGenerator:
         #       f"{[(cell.y, cell.x) for cell in self.current_solution]}")
         print("solution: "
               f"{[(cell.y, cell.x) for cell in self.current_solution]}")
-        free = self.get_free_neighbours(curr, prev)
+        free = self.get_free_neighbours(curr)
         if free:
             back = self.backtracking    # Alias to shorten function call
             while free:
@@ -569,11 +652,11 @@ def main() -> None:
         return
     file = sys.argv[1]
     config = conf.Config(file)
-    try:
-        config.parse_config(config.content)
-    except conf.ConfigError as err:
-        print(err)
-        return
+    # try:
+    #     config.parse_config(config.content)
+    # except conf.ConfigError as err:
+    #     print(err)
+    #     return
     print(f"\n--- Reading {file}")
     config.print()
     # hex_map = "b93d3\nc2c3a\n9696a\nabed2\nc4556"  # NENWNWSSWSSEN
