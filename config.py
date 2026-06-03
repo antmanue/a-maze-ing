@@ -12,7 +12,7 @@ class Config:
         self.exit: tuple[int, int] = (0, 0)
         self.output_file: str = ""
         self.perfect: bool = False
-        self.content = self.read_config(file_name)
+        self.content = ""
         self.valid = True
         self.seed: str = ""
         self.setup()
@@ -29,11 +29,14 @@ class Config:
         print(f"SEED = {self.seed} ({type(self.seed)})")
 
     def setup(self) -> None:
-        config = self.read_config(self.file_name)
         try:
+            config = self.read_config(self.file_name)
             self.parse_config(config)
         except ConfigError as err:
             print(err)
+            exit()
+        except ValueError:
+            print("Wrong syntax, usage <KEY=VALUE>")
             exit()
         if not self.seed:
             self.generate_seed()
@@ -50,26 +53,34 @@ class Config:
             return config
 
     def parse_config(self, config: dict[str, str]) -> None:
+        expected_keys = ["WIDTH", "HEIGHT", "ENTRY", "EXIT",
+                         "OUTPUT_FILE", "PERFECT"]
+        for key in expected_keys:
+            self.check_key(key, config)
         try:
             self.width = self.validate_int("WIDTH", config["WIDTH"])
             self.height = self.validate_int("HEIGHT", config["HEIGHT"])
-            entry = config["ENTRY"].split(',')
-            self.entry = (self.validate_int("ENTRY", entry[0]),
-                          self.validate_int("ENTRY", entry[1]))
-            exit = config["EXIT"].split(',')
-            self.exit = (self.validate_int("EXIT", exit[0]),
-                         self.validate_int("EXIT", exit[1]))
+            self.entry = (self.validate_coord("ENTRY", config["ENTRY"]))
+            self.entry = (self.validate_coord("EXIT", config["EXIT"]))
             self.validate_entry_exit()
             self.output_file = self.validate_str("OUTPUT_FILE",
                                                  config["OUTPUT_FILE"])
             self.perfect = self.validate_bool("PERFECT", config["PERFECT"])
             if "SEED" in config.keys():
                 self.seed = self.validate_str("SEED", config["SEED"])
-        except KeyError as err:
-            print(f'Error found in {self.file_name}: {err} not found')
+        except KeyError:
+            self.valid = False
+        except ConfigError as err:
+            print(f"Error found at '{self.file_name}': {err}.")
             self.valid = False
         if not self.valid:
             raise ConfigError("Configuration errors found, exiting program.")
+
+    def check_key(self, key: str, config: dict[str, str]) -> None:
+        try:
+            config[key] = config[key]
+        except KeyError as err:
+            print(f'Error found in {self.file_name}: {err} not found')
 
     def validate_int(self, key: str, value: str) -> int:
         arg = -1
@@ -87,6 +98,27 @@ class Config:
             # raise ConfigError(f"Error found in '{key}' at "
             #                   f"'{self.file_name}': {err}") from err
         return arg
+
+    def validate_coord(self, key: str, value: str) -> tuple[int, int]:
+        x = -1
+        y = -1
+        try:
+            x_str, y_str = value.split(',')
+            if not x_str or not y_str:
+                raise ConfigError(f"missing value '{value}', expected "
+                                  "<int,int>")
+            x = self.validate_int(key, x_str)
+            y = self.validate_int(key, y_str)
+            if x >= self.width:
+                raise (ConfigError(f"invalid value '{(x, y)}', x must be "
+                                   "less than 'WIDTH'"))
+            elif y >= self.height:
+                raise (ConfigError(f"invalid value '{(x, y)}', y must be "
+                                   "less than 'HEIGHT'"))
+        except (ValueError, ConfigError) as err:
+            self.valid = False
+            print(f"Error found in '{key}' at '{self.file_name}': {err}.")
+        return (x, y)
 
     def validate_str(self, key: str, value: str) -> str:
         arg = ""
