@@ -10,9 +10,9 @@ class Cell:
         self.north = self.calculate_bit(0)
         self.x = x
         self.y = y
-        self.f = 0
-        self.g = 0
-        self.h = 0
+        self.f = float('inf')
+        self.g = float('inf')
+        self.h = float('inf')
         self.parent: Cell | None = None
         self.coord = (self.x, self.y)
 

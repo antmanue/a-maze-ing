@@ -30,8 +30,8 @@ class MazeGenerator:
         self.paths: list[list[utils.Cell]] = []
         self.current_solution: list[utils.Cell] = []
         self.visited: list[utils.Cell] = []
-        self.unvisited: list[utils.Cell] = []
         # self.iters = 0
+        # self.counter = []
         self.logo_42: list[tuple[int, int]] = []
         self.setup()
 
@@ -60,10 +60,13 @@ class MazeGenerator:
         self.find_path()
         self.connect_paths()
         if not self.perfect:
-            print("Transforming into imperfect maze")
             self.transform_to_imperfect_maze()
+            print("Imperfect Maze")
+            print(self.draw_map())
             self.look_for_invalid_neighbours()
-            # self.clear_solutions()
+            print(self.draw_map())
+            self.clear_solutions()
+            self.a_star()
         self.map_hex = self.generate_hex()
         self.generate_path()
         self.generate_output()
@@ -259,6 +262,12 @@ class MazeGenerator:
         self.paths.clear()
         self.solution.clear()
         self.visited.clear()
+        for row in self.rows:
+            for cell in row:
+                cell.f = float('inf')
+                cell.g = float('inf')
+                cell.h = float('inf')
+                cell.parent = None
         logo_42_cells = [self.get_cell(x, y) for x, y in self.logo_42]
         self.visited.extend(logo_42_cells)
 
@@ -531,7 +540,7 @@ class MazeGenerator:
 
     def transform_to_imperfect_maze(self):
         size = self.height * self.width
-        remove_amount = int(size * 0.25)
+        remove_amount = int(size * 0.90)
         for _ in range(remove_amount):
             x = rand.randrange(self.width)
             y = rand.randrange(self.height)
@@ -545,45 +554,137 @@ class MazeGenerator:
             self.update_wall(self.get_cell(x, y), direction, 0)
 
     def look_for_invalid_neighbours(self) -> bool:
-        for y in range(self.height):
-            for x in range(self.width):
-                cell = self.get_cell(x, y)
+        for row in self.rows:
+            for cell in row:
                 if self.invalid_surrounding_neighbours(cell):
-                    print(f"Correcting {(y, x)}")
+                    print(f"Correcting {(cell.y, cell.x)}")
                     self.correct_neighbours(cell)
                     print(self.draw_map())
 
     def invalid_surrounding_neighbours(self, cell: utils.Cell) -> bool:
-        corners = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
-        values = [9, 3, 12, 6]
-        sides = [(-1, 0), (1, 0), (0, 1), (0, -1)]
-        values_sides = [8, 2, 4, 1]
-        for y in range(-1, 2):
-            for x in range(-1, 2):
-                if self.within_map(cell.x + x, cell.y + y):
-                    neigh = self.rows[cell.y + y][cell.x + x]
-                    if (x, y) in corners:
-                        if neigh.value > values[corners.index((x, y))]:
-                            # print(f"Invalid: {(cell.x + x, cell.y + y)}, value: {neigh.value} > {values[corners.index((x, y))]}")
+        corners_diff = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+        corner_bits = [[1, 2], [2, 3], [0, 1], [0, 3]]
+        sides_diff = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        side_bits = [[0, 1, 2], [0, 2, 3], [1, 2, 3], [0, 1, 3]]
+        neigh_coords = corners_diff.copy()
+        neigh_coords.extend(sides_diff)
+        for x, y in neigh_coords:
+            if cell.value != 0:
+                return False
+            if self.within_map(cell.x + x, cell.y + y):
+                neigh = self.rows[cell.y + y][cell.x + x]
+                if (x, y) in corners_diff:
+                    for bit in corner_bits[corners_diff.index((x, y))]:
+                        if neigh.calculate_bit(bit):
                             return False
-                    elif (x, y) in sides:
-                        if neigh.value > values_sides[sides.index((x, y))]:
-                            # print(f"Invalid: {(cell.x + x, cell.y + y)}, value: {neigh.value} > {values[sides.index((x, y))]}")
+                elif (x, y) in sides_diff:
+                    for bit in side_bits[sides_diff.index((x, y))]:
+                        if neigh.calculate_bit(bit):
                             return False
-                    print(f"Invalid: {(cell.x, cell.y)}, value: {cell.value} > {neigh.value} - {(neigh.x, neigh.y)}")
-                else:
-                    return False
+                # print(f"Invalid: {(cell.x, cell.y)}, value: {cell.value} > {neigh.value} - {(neigh.x, neigh.y)}")
+            else:
+                return False
+        # for y in range(-1, 2):
+        #     for x in range(-1, 2):
+        #         if self.within_map(cell.x + x, cell.y + y):
+        #             neigh = self.rows[cell.y + y][cell.x + x]
+        #             if (x, y) in corners:
+        #                 if neigh.value > values[corners.index((x, y))]:
+        #                     # print(f"Invalid: {(cell.x + x, cell.y + y)}, value: {neigh.value} > {values[corners.index((x, y))]}")
+        #                     return False
+        #             elif (x, y) in sides:
+        #                 if neigh.value > values_sides[sides.index((x, y))]:
+        #                     # print(f"Invalid: {(cell.x + x, cell.y + y)}, value: {neigh.value} > {values[sides.index((x, y))]}")
+        #                     return False
+        #             # print(f"Invalid: {(cell.x, cell.y)}, value: {cell.value} > {neigh.value} - {(neigh.x, neigh.y)}")
+        #         else:
+        #             return False
+        print(f"Neighbours of {(cell.y, cell.x)}: ")
+        neighs = [(self.get_cell(cell.x + x, cell.y + y), self.get_cell(cell.x + x, cell.y + y).value) for x, y in neigh_coords]
+        [{print(f"{(item[0].y, item[0].x)} - value: {item[1]}, ", end='') for item in neighs}]
+        print()
         return True
 
     def correct_neighbours(self, cell: utils.Cell) -> bool:
-        for dir in range(4):
+        free = [dir for dir in range(4)]
+        while free:
+            dir = rand.randint(0, 3)
             neigh = utils.Neighbour(cell, dir)
             if neigh in self.solution:
+                free = [dir for dir in range(4) if dir != dir]
                 continue
             else:
+                print(f"Wall built: {(cell.y, cell.x)} - {dir}")
                 self.update_wall(cell, dir, 1)
                 return True
+        print()
         return False
+
+    def a_star(self) -> None:
+        entry = self.get_cell(self.entry[0], self.entry[1])
+        exit = self.get_cell(self.exit[0], self.exit[1])
+
+        open_list: list[utils.Cell] = [entry]
+        closed_list: set[utils.Cell] = set()
+
+        entry.g = 0
+        entry.h = abs(entry.x - exit.x) + abs(entry.y - exit.y)
+        entry.f = entry.g + entry.h
+        entry.parent = None
+
+        while open_list:
+            curr = min(open_list, key=lambda cell: cell.f)
+
+            if curr == exit:
+                self.solution = []
+                while curr is not None:
+                    self.solution.append(curr)
+                    # if curr.parent:
+                    #     print(f"{(curr.parent.y, curr.parent.x)}")
+                    # else:
+                    #     print(f"No parent! for {(curr.y, curr.x)}")
+                    curr = curr.parent
+                self.solution.reverse()
+                self.paths.append(self.solution.copy())
+                return
+
+            open_list.remove(curr)
+            closed_list.add(curr)
+            # print("A* Open: ")
+            # [print(f"({cell.y, cell.x}, )", end='') for cell in open_list]
+            # print()
+            # print("A* Closed: ")
+            # [print(f"({cell.y, cell.x}, )", end='') for cell in closed_list]
+            # print()
+            # print()
+
+            for direction in range(4):
+                # Check if path is free
+                if curr.calculate_bit(direction):
+                    continue
+
+                neigh_coord = utils.Neighbour(curr, direction)
+                # Check if neighbour is valid
+                if not self.within_map(neigh_coord.x, neigh_coord.y):
+                    continue
+
+                neigh = self.get_cell(neigh_coord.x, neigh_coord.y)
+
+                if neigh in closed_list:
+                    continue
+
+                attempt_g = curr.g + 1
+                if neigh not in open_list:
+                    open_list.append(neigh)
+                # If f is higher old path is better
+                # print(f"{attempt_g} >= {neigh.g}? {attempt_g >= neigh.g}")
+                if attempt_g >= neigh.g:
+                    continue
+                neigh.parent = curr
+                # print(f"    Neigh parent = {neigh.parent}")
+                neigh.g = attempt_g
+                neigh.h = abs(neigh.x - exit.x) + abs(neigh.y - exit.y)
+                neigh.f = neigh.g + neigh.h
 
     def backtracking(self, curr: utils.Cell,
                      prev: utils.Cell):
@@ -698,7 +799,8 @@ def main() -> None:
         path.append(cell.coord)
     print(f"Entry: {maze.entry} | Exit {maze.exit}")
     print(f"Seed: {maze.seed}")
-
+    # print("Counter: ")
+    # [print(f"{item}, ", end='') for item in maze.counter]
     display = MazeDisplay(grid, maze.entry, maze.exit, path)
     display.render_terminal()
     display.run()
