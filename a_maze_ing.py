@@ -596,6 +596,7 @@ def main() -> None:
 
     print()
     print(maze)
+    print(f"Seed: {maze.seed}")
     # print(f"Entry: {maze.entry}")
     # print(f"Exit: {maze.exit}")
 
