@@ -1,0 +1,653 @@
+
+import src.config as conf
+import src.utils as utils
+import random as rand
+from typing import Generator
+
+
+class MazeGenerator:
+    def __init__(self, config: conf.Config, hex_map: str = "") -> None:
+        self.seed: str = config.seed
+        rand.seed(self.seed)
+        self.width = config.width
+        self.height = config.height
+        # self.entry = config.entry  # Original use
+        # self.exit = config.exit
+        self.entry = self.generate_random_entry_exit()  # Test random entries
+        self.exit = self.generate_random_entry_exit()
+        # self.entry = (2, 1)  # Fixed entry/exit
+        # self.exit = (4, 2)
+        self.output_file = config.output_file
+        self.perfect = config.perfect
+        self.rows: list[list[utils.Cell]] = []
+        self.grid: list[list[int]] = []
+        self.initial_state = ""
+        self.map_hex: str = hex_map
+        self.solution: list[utils.Cell] = []
+        self.path: str = ""
+        self.paths: list[list[utils.Cell]] = []
+        self.current_solution: list[utils.Cell] = []
+        self.visited: set[utils.Cell] = set()
+        self.not_visited: set[utils.Cell] = set()
+        self.all: set[utils.Cell] = set()
+        # self.iters = 0
+        # self.counter = []
+        self.logo_42: set[tuple[int, int]] = set()
+        self.setup()
+        self.needs_update = True
+
+    def __str__(self) -> str:
+        return '\n'.join([self.map_hex, self.path, self.draw_map()])
+
+    def setup(self) -> None:
+        self.render_initial_map()
+        # self.find_path()
+        # self.connect_paths()
+        # if not self.perfect:
+        #     self.transform_to_imperfect_maze()
+        #     self.look_for_invalid_neighbours()
+        #     self.clear_solutions()
+        #     self.a_star()
+        # self.map_hex = self.generate_hex()
+        # self.generate_path()
+        # self.generate_output()
+        # print()
+
+    def render_initial_map(self) -> None:
+        self.generate_map()
+        self.initial_state += self.generate_hex() + '\n'
+        self.initial_state += self.draw_map()
+        self.enclose_map()
+
+    def prepare_map_to_visual(self) -> list[tuple[int, int]]:
+        grid: list[list[int]] = []
+        for row in self.rows:
+            line: list[int] = []
+            grid.append(line)
+            for cell in row:
+                line.append(cell.value)
+        return grid
+
+    def prepare_solution_to_visual(self) -> Generator[tuple[int, int],
+                                                      None, None]:
+        # path: list[tuple[int, int]] = []
+        for cell in self.solution:
+            yield cell.coord
+            # path.append(cell.coord)
+            # yield path
+
+    def generate_random_entry_exit(self) -> tuple[int, int]:
+        res = (rand.randrange(0, self.width),
+               rand.randrange(0, self.height))
+        return res
+
+    def generate_42(self) -> None:
+        min_height = 5
+        min_width = 7
+        four: list[tuple[int, int]] = []
+        two: list[tuple[int, int]] = []
+        logo: list[tuple[int, int]] = []
+        forbiden: list[tuple[int, int]] = []
+        if self.width > min_width and self.height > min_height:
+            half = int(self.height / 2)
+            center_y = half
+
+            half = int(self.width / 2)
+            center_x = half
+
+            four = self.generate_4(center_x, center_y)
+            two = self.generate_2(center_x, center_y)
+
+            logo.extend(four)
+            logo.extend(two)
+            forbiden.extend([(center_x + 1, center_y - 1),
+                             (center_x, center_y - 1),
+                             (center_x + 3, center_y + 1),
+                             (center_x + 4, center_y + 1)])
+        for x, y in logo:
+            self.logo_42.add((x, y))
+        self.draw_42(forbiden)
+
+    def draw_42(self, forbidden: list[tuple[int, int]]) -> None:
+        min_height = 5
+        min_width = 7
+        try:
+            for x, y in self.logo_42:
+                cell = self.get_cell(x, y)
+                self.visited.add(cell)
+                if self.exit in (forbidden):
+                    raise conf.ConfigError("'EXIT' position will lead "
+                                           "to isolated cells")
+                elif self.exit in self.logo_42 or self.entry in self.logo_42:
+                    raise conf.ConfigError("'ENTRY'/'EXIT' will overwrite "
+                                           "42 pattern")
+                elif self.height <= min_height + 1:
+                    raise conf.ConfigError("Labirinth size is too small")
+                elif self.width <= min_width + 1:
+                    raise conf.ConfigError("Labirinth size is too small")
+                for direction in range(4):
+                    self.update_wall(cell, direction, 1)
+        except conf.ConfigError as err:
+            self.visited.clear()
+            self.all.clear()
+            print(f"[Warning] 42 pattern ommited due to forbidden "
+                  f"placement: {err}.")
+
+    def generate_4(self, center_x: int,
+                   center_y: int) -> list[tuple[int, int]]:
+        return [(center_x - 3, center_y - 2), (center_x - 3, center_y - 1),
+                (center_x - 3, center_y), (center_x - 2, center_y),
+                (center_x - 1, center_y), (center_x - 1, center_y + 1),
+                (center_x - 1, center_y + 2)]
+
+    def generate_2(self, center_x: int,
+                   center_y: int) -> list[tuple[int, int]]:
+        return [(center_x + 1, center_y - 2), (center_x + 2, center_y - 2),
+                (center_x + 3, center_y - 2), (center_x + 3, center_y - 1),
+                (center_x + 3, center_y), (center_x + 2, center_y),
+                (center_x + 1, center_y), (center_x + 1, center_y + 1),
+                (center_x + 1, center_y + 2), (center_x + 2, center_y + 2),
+                (center_x + 3, center_y + 2)]
+
+    def generate_map(self) -> None:
+        hex_str = self.map_hex
+        rows: list[list[int]] = []
+        if hex_str:
+            rows = self.hex_str_to_value_list(hex_str)
+            self.height = len(rows)
+            self.width = len(rows[0])
+        self.generate_map_from_config(rows)
+        self.generate_42()
+
+    def generate_map_from_config(self, values: list[list[int]] = []) -> None:
+        for y in range(self.height):
+            columns: list[utils.Cell] = []
+            self.rows.append(columns)
+            columns_int: list[int] = []
+            self.grid.append(columns_int)
+            for x in range(self.width):
+                if self.map_hex:
+                    value = values[y][x]    # Cell based on hex_map provided
+                else:
+                    value = 0   # Create empty cells
+                cell = utils.Cell(value, x, y)
+                self.all.add(cell)
+                columns_int.append(cell.value)
+                columns.append(cell)
+
+    def hex_str_to_value_list(self, hex_str: str) -> list[list[int]]:
+        hex_rows: list[list[int]] = []
+        for row in hex_str.split('\n'):
+            hex_row: list[int] = []
+            hex_rows.append(hex_row)
+            for char in row:
+                hex_row.append(int(char, 16))
+        return hex_rows
+
+    def enclose_map(self) -> None:
+        for row in self.rows:
+            for cell in row:
+                self.generate_borders(cell)
+
+    def generate_borders(self, cell: utils.Cell) -> None:
+        dir = utils.Directions()
+        if cell.y == 0:
+            cell.set_bit(dir.north, 1)
+        if cell.y == self.height - 1:
+            cell.set_bit(dir.south, 1)
+        if cell.x == 0:
+            cell.set_bit(dir.west, 1)
+        if cell.x == self.width - 1:
+            cell.set_bit(dir.east, 1)
+
+    def validate_walls(self, cell: utils.Cell) -> None:
+        dir = utils.Directions()
+        upper_neigh = utils.Neighbour(cell, dir.north)
+        left_neigh = utils.Neighbour(cell, dir.west)
+        lower_neigh = utils.Neighbour(cell, dir.south)
+        right_neigh = utils.Neighbour(cell, dir.east)
+        if upper_neigh.y >= 0:
+            upper_cell = self.get_cell(upper_neigh.x, upper_neigh.y)
+            self.enforce_shared_wall(upper_cell,
+                                     dir.north, cell)
+        if left_neigh.x >= 0:
+            left_cell = self.get_cell(left_neigh.x, left_neigh.y)
+            self.enforce_shared_wall(left_cell,
+                                     dir.west, cell)
+        if lower_neigh.y <= self.height - 1:
+            lower_cell = self.get_cell(lower_neigh.x, lower_neigh.y)
+            self.enforce_shared_wall(lower_cell,
+                                     dir.south, cell)
+        if right_neigh.x <= self.width - 1:
+            right_cell = self.get_cell(right_neigh.x, right_neigh.y)
+            self.enforce_shared_wall(right_cell,
+                                     dir.east, cell)
+
+    def enforce_shared_wall(self, reference: utils.Cell, wall: int,
+                            target: utils.Cell) -> None:
+        dir = utils.Directions()
+        neighbour_wall = reference.calculate_bit(dir.opposite(wall))
+        cell_wall = target.calculate_bit(wall)
+        if neighbour_wall != cell_wall:
+            target.set_bit(wall, neighbour_wall)
+
+    def generate_hex(self) -> str:
+        map_hex: list[str] = []
+        for row in self.rows:
+            row_str = ''
+            for cell in row:
+                hex_split = hex(cell.value).split('0x')
+                hex_value = hex_split[1]
+                row_str += hex_value
+            map_hex.append(row_str)
+        return '\n'.join(map_hex)
+
+    def generate_path(self) -> None:
+        dir = utils.Directions()
+        solution = self.solution.copy()
+        while len(solution) >= 2:
+            direction = dir.between(solution[0], solution[1])
+            self.path += dir.get_orientation(direction)
+            solution.pop(0)
+
+    def generate_output(self) -> None:
+        output = ""
+        output += self.map_hex + "\n\n"
+        output += self.path + '\n'
+        output += str(self.entry) + '\n'
+        output += str(self.exit)
+        with open(self.output_file, 'w') as file:
+            file.write(output)
+
+    def erase_map(self) -> None:
+        self.rows.clear()
+        self.initial_state = ""
+        self.map_hex = ""
+        self.path = ""
+
+    def clear_solutions(self) -> None:
+        self.current_solution.clear()
+        self.paths.clear()
+        self.solution.clear()
+        self.visited.clear()
+        self.all.clear()
+        for row in self.rows:
+            for cell in row:
+                cell.f = float('inf')
+                cell.g = float('inf')
+                cell.h = float('inf')
+                cell.parent = None
+        logo_42_cells = [self.get_cell(x, y) for x, y in self.logo_42]
+        self.visited.union(logo_42_cells)
+
+    def regenerate_map(self) -> None:
+        self.clear_solutions()
+        self.erase_map()
+        self.setup()
+
+    def draw_map(self) -> str:
+        """
+        Generates a clean ASCII visual grid representation of the maze,
+        accounting for shared walls, entry (O), and exit (X).
+        """
+        if not self.rows:
+            return ""
+
+        dir = utils.Directions()
+        map_lines = []
+
+        # 1. Build the top boundary line of the entire maze
+        top_line = "+"
+        for cell in self.rows[0]:
+            top_line += "---+" if cell.calculate_bit(dir.north) else "   +"
+        map_lines.append(top_line)
+
+        # 2. Build the body row-by-row
+        for y, row in enumerate(self.rows):
+            mid_line = ""  # Represents the cell centers and West/East walls
+            bot_line = "+"  # Represents the South walls and corners
+
+            for x, cell in enumerate(row):
+                coord = (cell.x, cell.y)
+                # --- Determine the West (left) Wall ---
+                if x == 0:
+                    mid_line += "|" if cell.calculate_bit(dir.west) else " "
+                # --- Determine Center Content (Path, Entry, or Exit) ---
+                if coord == self.entry:
+                    center = " O "
+                elif coord == self.exit:
+                    center = " X "
+                else:
+                    center = "   "
+                mid_line += center
+
+                # --- Determine the East (right) Wall ---
+                mid_line += "|" if cell.calculate_bit(dir.east) else " "
+
+                # --- Determine the South (bottom) Wall & Corner ---
+                bot_line += "---" if cell.calculate_bit(dir.south) else "   "
+                bot_line += "+"
+
+            map_lines.append(mid_line)
+            map_lines.append(bot_line)
+
+        return "\n".join(map_lines)
+
+    def check_all_boundaries(self) -> bool:
+        for row in self.rows:
+            for cell in row:
+                if not self.is_boundaries_synced(cell):
+                    return False
+        return True
+
+    def is_boundaries_synced(self, cell: utils.Cell) -> bool:
+        dir = utils.Directions()
+        up = cell.y - 1
+        down = cell.y + 1
+        left = cell.x - 1
+        right = cell.x + 1
+        if up >= 0:
+            neighbour_cell = self.rows[up][cell.x]
+            if not self.is_wall_synced(neighbour_cell, dir.north, cell):
+                return False
+        if left >= 0:
+            neighbour_cell = self.rows[cell.y][left]
+            if not self.is_wall_synced(neighbour_cell, dir.west, cell):
+                return False
+        if right <= self.width - 1:
+            neighbour_cell = self.rows[cell.y][right]
+            if not self.is_wall_synced(neighbour_cell, dir.east, cell):
+                return False
+        if down <= self.height - 1:
+            neighbour_cell = self.rows[down][cell.x]
+            if not self.is_wall_synced(neighbour_cell, dir.south, cell):
+                return False
+        return True
+
+    def is_wall_synced(self, neighbour: utils.Cell, wall: int,
+                       cell: utils.Cell) -> bool:
+        dir = utils.Directions()
+        neighbour_wall = neighbour.calculate_bit(dir.opposite(wall))
+        cell_wall = cell.calculate_bit(wall)
+        if neighbour_wall != cell_wall:
+            return False
+        return True
+
+    def get_free_neighbours(self, curr: utils.Cell) -> list[utils.Cell]:
+        free: list[utils.Cell] = []
+        for direction in range(4):
+            neighbour = utils.Neighbour(curr, direction)
+
+            if not self.within_map(neighbour.x, neighbour.y):
+                continue
+            if self.get_cell(neighbour.x, neighbour.y) in self.visited:
+                continue
+            free.append(self.rows[neighbour.y][neighbour.x])
+        return free
+
+    def within_map(self, x: int, y: int) -> bool:
+        if x < 0 or x >= self.width:
+            return False
+        elif y < 0 or y >= self.height:
+            return False
+        return True
+
+    def draw_walls(self, prev: utils.Cell, curr: utils.Cell,
+                   next: utils.Cell) -> None:
+        dir = utils.Directions()
+        self.validate_walls(curr)   # Sync with existing walls
+        for direction in range(dir.west + 1):  # Clear between prev curr next
+            wall_curr_next = dir.between(curr, next)
+            if (next.x, next.y) == self.exit:   # Isolate path to exit
+                if direction != dir.opposite(wall_curr_next):
+                    self.update_wall(next, direction, 1)
+            if not curr.calculate_bit(direction):
+                if curr == prev:
+                    if direction != wall_curr_next:
+                        self.update_wall(curr, direction, 1)
+                else:
+                    wall_curr_prev = dir.between(curr, prev)
+                    if direction not in [wall_curr_prev, wall_curr_next]:
+                        neigh = utils.Neighbour(curr, direction)
+                        if self.get_cell(neigh.x, neigh.y) in self.visited:
+                            continue
+                        self.update_wall(curr, direction, 1)
+            else:
+                if direction == wall_curr_next:
+                    self.update_wall(curr, direction, 0)
+
+    def update_wall(self, cell: utils.Cell, wall: int, value: int) -> None:
+        dir = utils.Directions()
+        neigh = utils.Neighbour(cell, wall)
+        if self.within_map(neigh.x, neigh.y):
+            cell.set_bit(wall, value)
+            self.enforce_shared_wall(cell, dir.opposite(wall),
+                                     self.rows[neigh.y][neigh.x])
+
+    def connect_cell(self, cell: utils.Cell, solution: bool = False) -> bool:
+        dir = utils.Directions()
+        walls: list[int] = []
+        for direction in range(dir.west + 1):
+            if cell.calculate_bit(direction):
+                walls.append(direction)
+        rand.shuffle(walls)
+        for wall in walls:
+            neigh = utils.Neighbour(cell, wall)
+            if self.within_map(neigh.x, neigh.y):
+                if solution:
+                    solutions = self.paths
+                    if self.get_cell(neigh.x, neigh.y) not in solutions[0]:
+                        continue
+                if (neigh.x, neigh.y) != self.exit:
+                    if (neigh.x, neigh.y) not in self.logo_42:
+                        self.update_wall(cell, wall, 0)
+                        return True
+        return False
+
+    def connect_to_path(self, path: list[utils.Cell],
+                        solut_path: bool = False) -> None:
+        while path:
+            cell = rand.choice(path)
+            removed = self.connect_cell(cell, solut_path)
+            if removed:
+                if solut_path:
+                    path = self.paths[0]
+                path_to_merge = -1
+                for solution in self.paths:
+                    if cell in solution:
+                        path_to_merge = self.paths.index(solution)
+                path.extend(self.paths[path_to_merge])
+                self.paths.pop(path_to_merge)
+                break
+            path.remove(cell)
+
+    def connect_paths(self) -> Generator[None, None, None]:
+        for i, path in enumerate(self.paths[1:]):
+            connectable_cells: list[utils.Cell] = []
+            for cell in path:
+                for direction in range(4):
+                    neigh = utils.Neighbour(cell, direction)
+                    if self.within_map(neigh.x, neigh.y):
+                        if self.get_cell(neigh.x, neigh.y).coord != self.exit:
+                            if self.rows[neigh.y][neigh.x] in self.paths[0]:
+                                connectable_cells.append(cell)
+                                break
+            if not connectable_cells:
+                self.connect_to_path(path)
+                yield
+            else:
+                self.connect_to_path(connectable_cells, True)
+                yield
+
+    def find_path(self) -> None:
+        x, y = self.entry
+        self.backtracking(self.rows[y][x], self.rows[y][x])
+        for row in self.rows:
+            for cell in row:
+                if cell not in self.visited:
+                    self.backtracking(cell, cell)
+
+    def get_cell(self, x: int, y: int) -> utils.Cell:
+        return self.rows[y][x]
+
+    def transform_to_imperfect_maze(self) -> Generator[None, None, None]:
+        size = self.height * self.width
+        remove_amount = int(size * 0.90)
+        for _ in range(remove_amount):
+            x = rand.randrange(self.width)
+            y = rand.randrange(self.height)
+            cell = self.get_cell(x, y)
+            direction = rand.randrange(4)
+            neigh = utils.Neighbour(cell, direction)
+            if cell.coord in self.logo_42 or cell.coord == self.exit:
+                continue
+            elif neigh.coord in self.logo_42:
+                continue
+            self.update_wall(self.get_cell(x, y), direction, 0)
+            yield
+
+    def look_for_invalid_neighbours(self) -> Generator[None, None, None]:
+        for row in self.rows:
+            for cell in row:
+                if self.invalid_surrounding_neighbours(cell):
+                    yield
+                    self.correct_neighbours(cell)
+
+    def invalid_surrounding_neighbours(self, cell: utils.Cell) -> bool:
+        corners_diff = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+        corner_bits = [[1, 2], [2, 3], [0, 1], [0, 3]]
+        sides_diff = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        side_bits = [[0, 1, 2], [0, 2, 3], [1, 2, 3], [0, 1, 3]]
+        neigh_coords = corners_diff.copy()
+        neigh_coords.extend(sides_diff)
+        for x, y in neigh_coords:
+            if cell.value != 0:
+                return False
+            if self.within_map(cell.x + x, cell.y + y):
+                neigh = self.rows[cell.y + y][cell.x + x]
+                if (x, y) in corners_diff:
+                    for bit in corner_bits[corners_diff.index((x, y))]:
+                        if neigh.calculate_bit(bit):
+                            return False
+                elif (x, y) in sides_diff:
+                    for bit in side_bits[sides_diff.index((x, y))]:
+                        if neigh.calculate_bit(bit):
+                            return False
+            else:
+                return False
+        return True
+
+    def correct_neighbours(self, cell: utils.Cell) -> bool:
+        free = [dir for dir in range(4)]
+        while free:
+            dir = rand.randint(0, 3)
+            neigh = utils.Neighbour(cell, dir)
+            if neigh in self.solution:
+                free = [dir for dir in range(4) if dir != dir]
+                continue
+            else:
+                self.update_wall(cell, dir, 1)
+                return True
+        return False
+
+    def a_star(self) -> None:
+        entry = self.get_cell(self.entry[0], self.entry[1])
+        exit = self.get_cell(self.exit[0], self.exit[1])
+
+        open_list: list[utils.Cell] = [entry]
+        closed_list: set[utils.Cell] = set()
+
+        entry.g = 0
+        entry.h = abs(entry.x - exit.x) + abs(entry.y - exit.y)
+        entry.f = entry.g + entry.h
+        entry.parent = None
+
+        while open_list:
+            curr = min(open_list, key=lambda cell: cell.f)
+
+            if curr == exit:
+                self.solution = []
+                while curr is not None:
+                    self.solution.append(curr)
+                    curr = curr.parent
+                self.solution.reverse()
+                self.paths.append(self.solution.copy())
+                return
+
+            open_list.remove(curr)
+            closed_list.add(curr)
+
+            for direction in range(4):
+                # Check if path is free
+                if curr.calculate_bit(direction):
+                    continue
+
+                neigh_coord = utils.Neighbour(curr, direction)
+                # Check if neighbour is valid
+                if not self.within_map(neigh_coord.x, neigh_coord.y):
+                    continue
+
+                neigh = self.get_cell(neigh_coord.x, neigh_coord.y)
+
+                if neigh in closed_list:
+                    continue
+
+                attempt_g = curr.g + 1
+                if neigh not in open_list:
+                    open_list.append(neigh)
+                if attempt_g >= neigh.g:
+                    continue
+                neigh.parent = curr
+                neigh.g = attempt_g
+                neigh.h = abs(neigh.x - exit.x) + abs(neigh.y - exit.y)
+                neigh.f = neigh.g + neigh.h
+
+    def backtracking(self, curr: utils.Cell,
+                     prev: utils.Cell):
+        """
+        Add cell to path, draw and sync neighbours,
+        remove if leads to dead end and repeat
+        """
+        if len(self.current_solution) > 0:
+            prev = self.current_solution[-1]
+        self.visited.add(curr)
+        self.current_solution.append(curr)
+        self.needs_update = True
+        yield
+
+        if (curr.x, curr.y) == self.exit and len(self.paths) == 0:
+            self.paths.append(self.current_solution.copy())
+            self.solution = self.current_solution.copy()
+            self.current_solution.clear()
+            return
+
+        free = self.get_free_neighbours(curr)
+        if free:
+            back = self.backtracking    # Alias to shorten function call
+            while free:
+                choice = rand.choice(free)  # Select random next cell
+                self.draw_walls(prev, curr, choice)
+                yield from back(self.rows[choice.y][choice.x], curr)
+                # if len(self.paths) > 0:
+                #     if len(self.current_solution) > 0:
+                #         self.paths.append(self.current_solution.copy())
+                #         self.current_solution.clear()
+                #     return
+                if len(self.paths) == 1 and not self.current_solution:
+                    return
+
+                free = [cell for cell in free if cell not in self.visited]
+                if free:
+                    if self.current_solution and self.current_solution[-1].coord != curr.coord:
+                        self.current_solution.pop()
+                # self.current_solution.remove(choice)
+                self.needs_update = True
+                yield
+        else:
+            if len(self.paths) > 0:
+                self.paths.append(self.current_solution.copy())
+                # if len(self.current_solution) > 0:
+                    # self.paths.append(self.current_solution.copy())
+                    # self.current_solution.clear()
+        if self.current_solution and self.current_solution[-1].coord == curr.coord:
+            self.current_solution.pop()
