@@ -68,9 +68,11 @@ class MazeDisplay:
         print("For the following options wait until maze is fully generated.")
         print("Press 'P' to turn on/off the path")
         print("Press 'I' to toggle between Perfect/Imperfect maze")
-        print(f"Seed: {self.maze.seed}\n"
-              "Maze configuration: "
-              f"{"Perfect" if self.maze.perfect else "Imperfect"}")
+        print()
+        print()
+        # print(f"Seed: {self.maze.seed}\n"
+        #       "Maze configuration: "
+        #       f"{"Perfect" if self.maze.perfect else "Imperfect"}")
         self.m.mlx_loop(self.mlx_ptr)
 
     def close_window(self, *args: Any) -> int:
@@ -108,15 +110,6 @@ class MazeDisplay:
             if self.path:
                 self.maze.perfect = not self.maze.perfect
                 self.needs_update = True
-
-        if self.maze.perfect:
-            toggle_message = "'Perfect'  "
-        else:
-            toggle_message = "'Imperfect'"
-        print("\033[F\033[K"
-              "\033[F\033[K")
-        print(f"Seed: {self.maze.seed}\n"
-              f"Maze configuration: {toggle_message}", end='')
         return 0
 
     def draw_maze_expose(self, *args: Any) -> int:
@@ -200,6 +193,15 @@ class MazeDisplay:
                     self.draw_rect(x, y, thick, self.block_size, current_color)
 
     def draw_maze_hook(self, *args: Any) -> int:
+
+        if self.maze.perfect:
+            toggle_message = "'Perfect'  "
+        else:
+            toggle_message = "'Imperfect'"
+        print("\033[F\033[K"
+              "\033[F\033[K")
+        print(f"Seed: {self.maze.seed}\n"
+              f"Maze configuration: {toggle_message}", end='')
         size = self.maze.height * self.maze.width
         iter_Step = int(0.05*size)
         # iter_Step = 1
