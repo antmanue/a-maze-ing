@@ -68,7 +68,9 @@ class MazeDisplay:
         print("For the following options wait until maze is fully generated.")
         print("Press 'P' to turn on/off the path")
         print("Press 'I' to toggle between Perfect/Imperfect maze")
-        print(f"Seed: {self.maze.seed}")
+        print(f"Seed: {self.maze.seed}\n"
+              "Maze configuration: "
+              f"{"Perfect" if self.maze.perfect else "Imperfect"}")
         self.m.mlx_loop(self.mlx_ptr)
 
     def close_window(self, *args: Any) -> int:
@@ -80,6 +82,7 @@ class MazeDisplay:
         # print(f"Pressed key: {keycode}")
         # Tecla ESC Exit
         if keycode == 65307:
+            print()
             os._exit(0)
         # Tecla 'C' Change color
         elif keycode == 99:
@@ -101,17 +104,19 @@ class MazeDisplay:
             self.path = []
             self.needs_update = True
             self.state = "GENERATING_SOLUTION"
-            # print(f"Seed: {self.maze.seed}\n", end='')
         elif keycode == 105:
             if self.path:
-                if self.maze.perfect:
-                    toggle_message = "'Imperfect'"
-                else:
-                    toggle_message = "'Perfect'  "
-                print("\rMaze configuration updated to "
-                      f"{toggle_message}", end='')
                 self.maze.perfect = not self.maze.perfect
                 self.needs_update = True
+
+        if self.maze.perfect:
+            toggle_message = "'Perfect'  "
+        else:
+            toggle_message = "'Imperfect'"
+        print("\033[F\033[K"
+              "\033[F\033[K")
+        print(f"Seed: {self.maze.seed}\n"
+              f"Maze configuration: {toggle_message}", end='')
         return 0
 
     def draw_maze_expose(self, *args: Any) -> int:
@@ -211,6 +216,7 @@ class MazeDisplay:
                     self.gen_iter = self.maze.transform_to_imperfect_maze()
                     self.state = "BREAKING_WALLS"
                 else:
+                    self.solut_iter = self.maze.prepare_solution_to_visual()
                     self.state = "SOLVING"
         elif self.state == "BREAKING_WALLS":
             try:
@@ -234,6 +240,7 @@ class MazeDisplay:
                 self.grid = self.maze.prepare_map_to_visual()
                 self.draw_maze()
                 self.maze.a_star()
+                self.solut_iter = self.maze.prepare_solution_to_visual()
                 self.state = "SOLVING"
         elif self.state == "SOLVING":
             try:

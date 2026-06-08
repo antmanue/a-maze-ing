@@ -30,6 +30,7 @@ class MazeGenerator:
         self.needs_update = True
 
     def render_initial_map(self) -> None:
+        self.seed = conf.Config.generate_seed()
         self.generate_map()
         self.enclose_map()
 
