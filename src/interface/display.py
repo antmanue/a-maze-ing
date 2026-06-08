@@ -1,35 +1,21 @@
-from typing import List, Any, Tuple
+from typing import Any
 from mlx import Mlx
 import os
 from ..mazegen import MazeGenerator
 
 
 class MazeDisplay:
-    def __init__(self, maze: MazeGenerator,
-                 grid: List[List[int]] = None,
-                 start: Tuple[int, int] = (0, 0),
-                 end: Tuple[int, int] = (2, 2),
-                 path: List[Tuple[int, int]] = None) -> None:
+    def __init__(self, maze: MazeGenerator) -> None:
 
         # Data
         self.maze = maze
-        self.grid = maze.prepare_map_to_visual() if grid is not None else [
-            [15,  2,  15,  2,  15,  15,  15],
-            [15, 0,  15,  0,  5,  0,  15],
-            [15, 15, 15, 12, 15,  15,  15],
-            [12, 0, 15,  0, 15,  0,  6],
-            [12, 4,  15,  4,  15,  15,  15],
-            #[9, 2, 3],
-            #[12, 0, 2],
-            #[15, 4, 6],
-        ]
-        self.start = start
-        self.end = end
-        self.path = []  # if path is not None else [(0, 0), (0, 1), (1, 1), (2, 1), (2, 2)]
+        self.grid = maze.prepare_map_to_visual()
+        self.start = self.maze.entry
+        self.end = self.maze.exit
+        self.path: list[tuple[int, int]] = []
         x, y = self.start
-        self.gen_iter = self.maze.backtracking(self.maze.get_cell(x, y),
-                                               self.maze.get_cell(x, y))
-        self.solut_iter = None
+        self.gen_iter = self.maze.backtracking(self.maze.get_cell(x, y))
+        self.solut_iter = self.maze.prepare_solution_to_visual()
         self.state = "GENERATING_SOLUTION"
 
         self.block_size: int = 16
@@ -75,9 +61,14 @@ class MazeDisplay:
 
     def run(self) -> None:
         print("Opening A-Maze-ing graphic window...")
-        print("Press C to change color")
-        print("Press P to turn on/off the path")
-        print("Press R to redraw a new maze color")
+        print("Press 'C' to change color")
+        print("Press 'R' to re-generate the maze")
+        print("Press 'ESC' to exit")
+        print()
+        print("For the following options wait until maze is fully generated.")
+        print("Press 'P' to turn on/off the path")
+        print("Press 'I' to toggle between Perfect/Imperfect maze")
+        print(f"Seed: {self.maze.seed}")
         self.m.mlx_loop(self.mlx_ptr)
 
     def close_window(self, *args: Any) -> int:
@@ -86,28 +77,41 @@ class MazeDisplay:
         os._exit(0)
 
     def handle_keypress(self, keycode: int, param: int) -> int:
-        print(f"Pressed key: {keycode}")
+        # print(f"Pressed key: {keycode}")
         # Tecla ESC Exit
         if keycode == 65307:
             os._exit(0)
         # Tecla 'C' Change color
         elif keycode == 99:
-            print("Maze color has been changed")
+            # print("Maze color has been changed")
             self.color_index = (self.color_index + 1) % len(self.wall_colors)
             self.needs_update = True
         # Tecla 'P' Liga/Desliga o caminho da solucao
         elif keycode == 112:
-            self.show_path = not self.show_path
-            self.needs_update = True
+            if self.path:
+                self.show_path = not self.show_path
+                self.needs_update = True
         # Tecla 'R' Regen Maze
         elif keycode == 114:
-            print("Redrawing maze...")
+            # print("Redrawing maze...")
             self.maze.regenerate_map()
             x, y = self.maze.entry
+            self.gen_iter = self.maze.backtracking(self.maze.get_cell(x, y))
             self.grid = self.maze.prepare_map_to_visual()
             self.path = []
             self.needs_update = True
             self.state = "GENERATING_SOLUTION"
+            # print(f"Seed: {self.maze.seed}\n", end='')
+        elif keycode == 105:
+            if self.path:
+                if self.maze.perfect:
+                    toggle_message = "'Imperfect'"
+                else:
+                    toggle_message = "'Perfect'  "
+                print("\rMaze configuration updated to "
+                      f"{toggle_message}", end='')
+                self.maze.perfect = not self.maze.perfect
+                self.needs_update = True
         return 0
 
     def draw_maze_expose(self, *args: Any) -> int:
@@ -191,46 +195,11 @@ class MazeDisplay:
                     self.draw_rect(x, y, thick, self.block_size, current_color)
 
     def draw_maze_hook(self, *args: Any) -> int:
-        # if self.maze.needs_update is True:
         size = self.maze.height * self.maze.width
         iter_Step = int(0.05*size)
+        # iter_Step = 1
         if self.state == "GENERATING_SOLUTION":
             try:
-                print("Updating map")
-                for _ in range(iter_Step):
-                    next(self.gen_iter)
-                self.grid = self.maze.prepare_map_to_visual()
-                self.draw_maze()
-            except (StopIteration, RecursionError) as err:
-                print(f"Stop Iteration / Recursion error: {err}")
-                self.grid = self.maze.prepare_map_to_visual()
-                self.draw_maze()
-                self.state = "CHOOSING_DEADEND"
-        elif self.state == "CHOOSING_DEADEND":
-            not_visited = self.maze.all.difference(self.maze.visited)
-            print(f"Not_visited: {len(not_visited)} | all: {len(self.maze.all)} | visited: {len(self.maze.visited)}")
-            if not_visited:
-                cell = next(iter(not_visited))
-                self.gen_iter = self.maze.backtracking(cell, cell)
-                self.state = "GENERATING_DEADEND"
-                print("After backtrackiing")
-            else:
-                self.gen_iter = self.maze.connect_paths()
-                self.state = "CONNECTING_PATHS"
-        elif self.state == "GENERATING_DEADEND":
-            try:
-                print("Generating deadend")
-                for _ in range(iter_Step):
-                    next(self.gen_iter)
-                self.grid = self.maze.prepare_map_to_visual()
-                self.draw_maze()
-            except StopIteration:
-                self.grid = self.maze.prepare_map_to_visual()
-                self.draw_maze()
-                self.state = "CHOOSING_DEADEND"
-        elif self.state == "CONNECTING_PATHS":
-            try:
-                print("Connecting paths")
                 for _ in range(iter_Step):
                     next(self.gen_iter)
                 self.grid = self.maze.prepare_map_to_visual()
@@ -242,11 +211,9 @@ class MazeDisplay:
                     self.gen_iter = self.maze.transform_to_imperfect_maze()
                     self.state = "BREAKING_WALLS"
                 else:
-                    self.solut_iter = self.maze.prepare_solution_to_visual()
                     self.state = "SOLVING"
         elif self.state == "BREAKING_WALLS":
             try:
-                print("Breaking walls")
                 for _ in range(iter_Step):
                     next(self.gen_iter)
                 self.grid = self.maze.prepare_map_to_visual()
@@ -267,7 +234,6 @@ class MazeDisplay:
                 self.grid = self.maze.prepare_map_to_visual()
                 self.draw_maze()
                 self.maze.a_star()
-                self.solut_iter = self.maze.prepare_solution_to_visual()
                 self.state = "SOLVING"
         elif self.state == "SOLVING":
             try:
@@ -276,15 +242,15 @@ class MazeDisplay:
                     self.path.append(next_coord)
                 self.grid = self.maze.prepare_map_to_visual()
                 self.draw_maze()
-                # self.path = self.maze.prepare_solution_to_visual()
                 self.draw_maze()
             except StopIteration:
                 self.grid = self.maze.prepare_map_to_visual()
                 self.draw_maze()
-                self.map_hex = self.maze.generate_hex()
+                self.maze.map_hex = self.maze.generate_hex()
                 self.maze.generate_path()
                 self.maze.generate_output()
                 self.state = "DONE"
-            # self.draw_maze()
-            # self.maze.needs_update = False
+        if self.needs_update:
+            self.draw_maze()
+            self.needs_update = False
         return 0

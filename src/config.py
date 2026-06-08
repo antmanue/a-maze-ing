@@ -39,7 +39,7 @@ class Config:
             print("Wrong syntax, usage <KEY=VALUE>")
             exit()
         if not self.seed:
-            self.generate_seed()
+            self.seed = self.generate_seed()
 
     def read_config(self, file_name: str) -> dict[str, str]:
         with open(file_name) as file:
@@ -61,7 +61,7 @@ class Config:
             self.width = self.validate_int("WIDTH", config["WIDTH"])
             self.height = self.validate_int("HEIGHT", config["HEIGHT"])
             self.entry = (self.validate_coord("ENTRY", config["ENTRY"]))
-            self.entry = (self.validate_coord("EXIT", config["EXIT"]))
+            self.exit = (self.validate_coord("EXIT", config["EXIT"]))
             self.validate_entry_exit()
             self.output_file = self.validate_str("OUTPUT_FILE",
                                                  config["OUTPUT_FILE"])
@@ -154,9 +154,12 @@ class Config:
             print(f"Error found in 'ENTRY'/'EXIT' at "
                   f"'{self.file_name}': {err}")
 
-    def generate_seed(self) -> None:
+    @staticmethod
+    def generate_seed() -> str:
+        seed = ''
         for _ in range(15):
-            self.seed += f'{rand.randrange(16):X}'
+            seed += f'{rand.randrange(16):X}'
+        return seed
 
     @staticmethod
     def bool_str(s: str) -> str:

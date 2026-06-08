@@ -58,37 +58,9 @@ def main() -> None:
         path.append(cell.coord)
     print(f"Entry: {maze.entry} | Exit {maze.exit}")
     print(f"Seed: {maze.seed}")
-    # print("Counter: ")
-    # [print(f"{item}, ", end='') for item in maze.counter]
-    # display = MazeDisplay(grid, maze.entry, maze.exit, path)
-    display = MazeDisplay(maze, grid, maze.entry, maze.exit, path)
+    display = MazeDisplay(maze)
     display.render_terminal()
     display.run()
-
-
-def test_map_regen(maze: MazeGenerator) -> None:
-    print("Map before regen:")
-    print(maze.map_hex)
-    maze.regenerate_map()
-    print("Map after regen:")
-    print(maze.map_hex)
-    # print("\n- Maze initial map")
-    # print(maze.initial_state)
-    # print("\n- Maze normalized map")
-    # print(maze)
-    # print()
-
-
-def test_all_walls_synced(maze: MazeGenerator) -> None:
-    print("Is all boundaries of all cells in sync? "
-          f"{maze.check_all_boundaries()}")
-    print("\nModify a cell to break wall sync")
-    x, y = input("Modify cell in coordinates (x, y): ").split(' ')
-    wall, value = input("Choose a wall and new value: ").split(' ')
-    maze.rows[int(y)][int(x)].set_bit(int(wall), int(value))
-    print(maze)
-    print("Is all boundaries of all cells in sync? "
-          f"{maze.check_all_boundaries()}")
 
 
 if __name__ == "__main__":
