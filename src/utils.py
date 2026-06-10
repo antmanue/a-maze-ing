@@ -92,7 +92,7 @@ class Directions:
         raise ValueError("Directions:between() - No walls in between "
                          f"{(orig.y, orig.x)} and {(dest.y, dest.x)}")
 
-    def get_orientation(self, direction: int):
+    def get_orientation(self, direction: int) -> str:
         orientation = ["N", "E", "S", "W"]
         return orientation[direction]
 
