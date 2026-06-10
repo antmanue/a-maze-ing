@@ -25,7 +25,11 @@ class MazeDisplay:
         # Init
         self.m: Mlx = Mlx()
         self.mlx_ptr: Any = self.m.mlx_init()
-        self.win_ptr: Any = self.m.mlx_new_window(self.mlx_ptr, self.window_width, self.window_height, "A-Maze-ing")
+        self.win_ptr: Any = self.m.mlx_new_window(
+            self.mlx_ptr, self.window_width,
+            self.window_height,
+            "A-Maze-ing"
+            )
         # State
         self.needs_update: bool = True
         self.show_path: bool = True
@@ -41,15 +45,15 @@ class MazeDisplay:
         self.wall_thickness: int = 1
         self.path_thickness: int = 6
         self.wall_colors: list[int] = [
-            0xFFFFFFFF, #branco
-            0xFF00FF00, #verde
-            0xFF0000FF, #azul
-            0xFFFFFF00, #amarelo
-            0xFFF88379 #coral
+            0xFFFFFFFF,  # branco
+            0xFF00FF00,  # verde
+            0xFF0000FF,  # azul
+            0xFFFFFF00,  # amarelo
+            0xFFF88379  # coral
         ]
         self.color_index: int = 0
 
-        #Small Maze
+        # Small Maze
         if len(self.grid) < 5 or len(self.grid[0]) < 7:
             print("Maze is too small to draw '42'")
 
@@ -70,14 +74,14 @@ class MazeDisplay:
         print("Press 'I' to toggle between Perfect/Imperfect maze")
         print()
         print()
-        # print(f"Seed: {self.maze.seed}\n"
+        #  print(f"Seed: {self.maze.seed}\n"
         #       "Maze configuration: "
         #       f"{"Perfect" if self.maze.perfect else "Imperfect"}")
         self.m.mlx_loop(self.mlx_ptr)
 
     def close_window(self, *args: Any) -> int:
         print("Closing A-Maze-ing...")
-        #self.m.mlx_destroy_window(self.mlx_ptr, self.win_ptr)
+        # self.m.mlx_destroy_window(self.mlx_ptr, self.win_ptr)
         os._exit(0)
 
     def handle_keypress(self, keycode: int, param: int) -> int:
@@ -117,7 +121,14 @@ class MazeDisplay:
         self.drawn = True
         return 0
 
-    def draw_rect(self, start_x: int, start_y: int, width: int, height: int, color: int) -> None:
+    def draw_rect(
+            self,
+            start_x: int,
+            start_y: int,
+            width: int,
+            height: int,
+            color: int
+            ) -> None:
         for y in range(start_y, start_y + height):
             for x in range(start_x, start_x + width):
                 self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr, x, y, color)
@@ -128,20 +139,28 @@ class MazeDisplay:
 
         thick = self.wall_thickness
 
-        #Layer 1
-        for row in range (len(self.grid)):
-            for col in range (len(self.grid[row])):
+        # Layer 1
+
+        for row in range(len(self.grid)):
+            for col in range(len(self.grid[row])):
                 if self.grid[row][col] == 15:
                     x = col * self.block_size
                     y = row * self.block_size
-                    self.draw_rect(x + thick, y + thick, self.block_size - (2 * thick), self.block_size -(2 *thick), 0xFFD3D3D3)
+                    self.draw_rect(
+                            x + thick,
+                            y + thick,
+                            self.block_size - (2 * thick),
+                            self.block_size - (2 * thick),
+                            0xFFD3D3D3
+                            )
 
-        #Layer 2
+        # Layer 2
+
         if self.show_path and len(self.path) > 0:
             pt = self.path_thickness
             half_block = self.block_size // 2
 
-            for i in range (len(self.path) - 1):
+            for i in range(len(self.path) - 1):
                 c1, r1 = self.path[i]
                 c2, r2 = self.path[i+1]
 
@@ -157,7 +176,7 @@ class MazeDisplay:
 
                 self.draw_rect(lx, ly, lw, lh, 0xFF289D8C)
 
-        #Layer 3
+        # Layer 3
         half_block = self.block_size // 2
 
         start_col, start_row = self.start
@@ -170,7 +189,7 @@ class MazeDisplay:
         ed_cy = end_row * self.block_size
         self.draw_rect(ed_cx, ed_cy, 12, 12, 0xFFFF0000)
 
-        #Layer 4
+        # Layer 4
         current_color = self.wall_colors[self.color_index]
 
         for row in range(len(self.grid)):
@@ -179,16 +198,29 @@ class MazeDisplay:
                 y = row * self.block_size
                 cell_value = self.grid[row][col]
 
-                #Wall N
+                # Wall N
                 if cell_value & 1:
                     self.draw_rect(x, y, self.block_size, thick, current_color)
-                #Wall E
+                # Wall E
                 if cell_value & 2:
-                    self.draw_rect(x + self.block_size - thick, y, thick, self.block_size, current_color)
-                #Wall S
+                    self.draw_rect(
+                        x + self.
+                        block_size - thick,
+                        y,
+                        thick,
+                        self.block_size,
+                        current_color
+                        )
+                # Wall S
                 if cell_value & 4:
-                    self.draw_rect(x, y + self.block_size - thick, self.block_size, thick, current_color)
-                #Wall W
+                    self.draw_rect(
+                        x,
+                        y + self.block_size - thick,
+                        self.block_size,
+                        thick,
+                        current_color
+                        )
+                # Wall W
                 if cell_value & 8:
                     self.draw_rect(x, y, thick, self.block_size, current_color)
 

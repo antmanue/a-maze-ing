@@ -34,7 +34,7 @@ class MazeGenerator:
         self.generate_map()
         self.enclose_map()
 
-    def prepare_map_to_visual(self) -> list[list[int, int]]:
+    def prepare_map_to_visual(self) -> list[list[int]]:
         grid: list[list[int]] = []
         for row in self.rows:
             line: list[int] = []
