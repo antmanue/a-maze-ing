@@ -8,7 +8,7 @@ install: ## 1.1 DONT FORGET TO ACTIVATE "VENV" IT FIRST. Install linters
 	pip install mypy
 	pip install flake8
 	pip install mlx-2.2-py3-none-any.whl
-	python3 -c "from mlx import Mlx; print('MLX OK')"
+	python3 -c "from mlx import Mlx; print('[OK] MLX')"
 
 package: ## 1.2 Install files from build
 	pip install mlx-2.2-py3-none-any.whl
