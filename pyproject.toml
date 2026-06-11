@@ -13,4 +13,4 @@ authors = [{name = "pedrohe3"}, {name = "antmanue"}]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["mazegen-*"]
+include = ["mazegen"]

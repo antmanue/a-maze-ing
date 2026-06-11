@@ -10,16 +10,30 @@ install: ## 2. DONT FORGET TO ACTIVATE IT FIRST. Install linters
 	pip install mlx-2.2-py3-none-any.whl
 	python3 -c "from mlx import Mlx; print('MLX OK')"
 
-run: ## Run
-	python3 a_maze_ing.py config.txt
-
-debug:
+package: ## Install files from build
+	pip install mlx-2.2-py3-none-any.whl
+	pip install build
+	python3 -m build
+	mv dist/mazegen-1.0.0-py3-none-any.whl .
+	pip install mazegen-1.0.0-py3-none-any.whl
 
 clean: ## Delete all bytecode (.pyc) that is stored inside __pycache__ and remove virtual env
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
 	rm -rf venv
+	rm -rf dist
+	rm -rf build
+	rm -rf *.egg-info
+	rm mazegen-*.whl
 	rm maze.txt
+
+run: ## Run
+	python3 a_maze_ing.py config.txt
+
+debug:
+	python3 -m pdb a_maze_ing.py config.txt
+
+	
 
 lint:
 	flake8 . --exclude=venv
