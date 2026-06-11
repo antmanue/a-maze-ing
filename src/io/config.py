@@ -38,8 +38,6 @@ class Config:
         except ValueError:
             print("Wrong syntax, usage <KEY=VALUE>")
             exit()
-        if not self.seed:
-            self.seed = self.generate_seed()
 
     def read_config(self, file_name: str) -> dict[str, str]:
         with open(file_name) as file:
@@ -95,8 +93,6 @@ class Config:
         except (ValueError, ConfigError, TypeError) as err:
             self.valid = False
             print(f"Error found in '{key}' at '{self.file_name}': {err}.")
-            # raise ConfigError(f"Error found in '{key}' at "
-            #                   f"'{self.file_name}': {err}") from err
         return arg
 
     def validate_coord(self, key: str, value: str) -> tuple[int, int]:
@@ -129,8 +125,6 @@ class Config:
         except (ValueError, ConfigError, TypeError) as err:
             self.valid = False
             print(f"Error found in '{key}' at '{self.file_name}': {err}.")
-            # raise ConfigError(f"Error found in '{key}' at "
-            #                   f"'{self.file_name}': {err}") from err
         return arg
 
     def validate_bool(self, key: str, value: str) -> bool:
@@ -141,8 +135,6 @@ class Config:
         except (ValueError, ConfigError, TypeError) as err:
             self.valid = False
             print(f"Error found in '{key}' at '{self.file_name}': {err}.")
-            # raise ConfigError(f"Error found in '{key}' at "
-            #                   f"'{self.file_name}': {err}") from err
         return arg
 
     def validate_entry_exit(self) -> None:
