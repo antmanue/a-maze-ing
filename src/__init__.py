@@ -1,5 +1,5 @@
-from .mazegen.generator import MazeGenerator
-from .interface.display import MazeDisplay
+from .logic.generator import MazeGenerator
+from .ui.display import MazeDisplay
 
 __all__ = [
     "MazeGenerator",
