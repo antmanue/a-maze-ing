@@ -5,7 +5,9 @@ from ..logic import MazeGenerator, Algorithms
 
 
 class MazeDisplay:
+    """Manages window interface graphics and structural animations."""
     def __init__(self, generator: MazeGenerator) -> None:
+        """Initializes engine layers, color tables, and screen specs."""
 
         # Data
         self.gen = generator
@@ -55,6 +57,7 @@ class MazeDisplay:
         self.color_index: int = 0
 
     def run(self) -> None:
+        """Launches execution window render interfaces and input loops."""
         print("Opening A-Maze-ing graphic window...")
         print("Press 'C' to change color")
         print("Press 'R' to re-generate the maze")
@@ -71,11 +74,13 @@ class MazeDisplay:
         self.m.mlx_loop(self.mlx_ptr)
 
     def close_window(self, *args: Any) -> int:
+        """Destroys active environment setups and cleanly terminates."""
         print("Closing A-Maze-ing...")
         # self.m.mlx_destroy_window(self.mlx_ptr, self.win_ptr)
         os._exit(0)
 
     def handle_keypress(self, keycode: int, param: int) -> int:
+        """Map actions based on user key inputs."""
         # Tecla ESC Exit
         if keycode == 65307:
             print()
@@ -105,6 +110,7 @@ class MazeDisplay:
         return 0
 
     def draw_maze_expose(self, *args: Any) -> int:
+        """Triggers refresh cycles under layout window focus events."""
         self.draw_maze()
         self.drawn = True
         return 0
@@ -117,11 +123,13 @@ class MazeDisplay:
             height: int,
             color: int
             ) -> None:
+        """Fills target screen quadrants with specific hex color values."""
         for y in range(start_y, start_y + height):
             for x in range(start_x, start_x + width):
                 self.m.mlx_pixel_put(self.mlx_ptr, self.win_ptr, x, y, color)
 
     def draw_maze(self) -> None:
+        """Renders matrix layouts, active paths, and gates cleanly."""
 
         self.draw_rect(0, 0, self.window_width, self.window_height, 0XFF000000)
 
@@ -213,6 +221,7 @@ class MazeDisplay:
                     self.draw_rect(x, y, thick, self.block_size, current_color)
 
     def draw_maze_hook(self, *args: Any) -> int:
+        """Drives background frame transitions across iterative states."""
         size = self.gen.maze.height * self.gen.maze.width
         iter_Step = int(0.05*size)
         if iter_Step <= 1:

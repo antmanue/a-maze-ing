@@ -4,7 +4,9 @@ import random as rand
 
 
 class Config:
+    """Tracks structural setups and validations from setup properties."""
     def __init__(self, file_name: str):
+        """Initializes variables and reads external text profiles."""
         self.file_name = file_name
         self.width: int = 0
         self.height: int = 0
@@ -18,6 +20,7 @@ class Config:
         self.setup()
 
     def print(self) -> None:
+        """Prints current configuration."""
         print(f"WIDTH = {self.width} ({type(self.width)})")
         print(f"HEIGHT = {self.height} ({type(self.height)})")
         print(f"ENTRY = {self.entry} ({type(self.entry[0])}, "
@@ -29,6 +32,7 @@ class Config:
         print(f"SEED = {self.seed} ({type(self.seed)})")
 
     def setup(self) -> None:
+        """Initialization pipeline to parse configuration text file."""
         try:
             config = self.read_config(self.file_name)
             self.parse_config(config)
@@ -40,6 +44,7 @@ class Config:
             exit()
 
     def read_config(self, file_name: str) -> dict[str, str]:
+        """Reads text lines to extract valid key-value pairs."""
         with open(file_name) as file:
             config: dict[str, str] = {}
             for line in file.readlines():
@@ -51,6 +56,7 @@ class Config:
             return config
 
     def parse_config(self, config: dict[str, str]) -> None:
+        """Converts and validates parsed keys to appropriate type."""
         expected_keys = ["WIDTH", "HEIGHT", "ENTRY", "EXIT",
                          "OUTPUT_FILE", "PERFECT"]
         for key in expected_keys:
@@ -75,12 +81,14 @@ class Config:
             raise ConfigError("Configuration errors found, exiting program.")
 
     def check_key(self, key: str, config: dict[str, str]) -> None:
+        """Checks for required properties."""
         try:
             config[key] = config[key]
         except KeyError as err:
             print(f'Error found in {self.file_name}: {err} not found')
 
     def validate_int(self, key: str, value: str) -> int:
+        """Ensure integer values for a map."""
         arg = -1
         try:
             arg = int(value)
@@ -96,6 +104,7 @@ class Config:
         return arg
 
     def validate_coord(self, key: str, value: str) -> tuple[int, int]:
+        """Validate each coordinate value and ensure size requirements."""
         x = -1
         y = -1
         try:
@@ -117,6 +126,7 @@ class Config:
         return (x, y)
 
     def validate_str(self, key: str, value: str) -> str:
+        """Confirms provided alpha configurations exists."""
         arg = ""
         try:
             arg = str(value)
@@ -128,6 +138,7 @@ class Config:
         return arg
 
     def validate_bool(self, key: str, value: str) -> bool:
+        """Converts alphanumeric flags to boolean data."""
         arg = False
         try:
             value = self.bool_str(value)
@@ -138,6 +149,7 @@ class Config:
         return arg
 
     def validate_entry_exit(self) -> None:
+        """Ensures distinct coordinates from entrance and exit."""
         try:
             if self.exit == self.entry:
                 raise ConfigError("'ENTRY' and 'EXIT' must be different.")
@@ -147,14 +159,8 @@ class Config:
                   f"'{self.file_name}': {err}")
 
     @staticmethod
-    def generate_seed() -> str:
-        seed = ''
-        for _ in range(15):
-            seed += f'{rand.randrange(16):X}'
-        return seed
-
-    @staticmethod
     def bool_str(s: str) -> str:
+        """Normalizes string and validate for boolean type."""
         s = s.lower()
         dict_bool = {"false": "", "true": "true"}
         if s in dict_bool:
@@ -163,8 +169,11 @@ class Config:
 
 
 class ConfigError(Exception):
+    """Custom exception identifying structural initialization errors."""
     def __init__(self, *args: object) -> None:
+        """Initializes baseline exception fields."""
         super().__init__(*args)
 
     def __str__(self) -> str:
+        """Formats exception errors as legible text representations."""
         return super().__str__()

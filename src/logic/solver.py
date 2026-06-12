@@ -4,10 +4,13 @@ from enum import IntEnum
 
 
 class Solver:
+    """Handles maze solving computations using search algorithms."""
     def __init__(self, maze: Maze):
+        """Initializes the maze solver with a target maze layout."""
         self.maze = maze
 
     def use_algorithm(self, algorithm: int) -> list[Cell]:
+        """Executes a maze-solving pipeline using specified algorithm."""
         try:
             if algorithm == Algorithms.A_STAR:
                 name = "A*"
@@ -20,6 +23,7 @@ class Solver:
         return []
 
     def a_star(self) -> list[Cell]:
+        """Finds optimal paths from entry to exit using A* search."""
         entry = self.maze.get_cell(self.maze.entry)
         exit = self.maze.get_cell(self.maze.exit)
 
@@ -72,10 +76,13 @@ class Solver:
 
 
 class Algorithms(IntEnum):
+    """Enumeration of supported maze solving algorithms."""
     A_STAR = 0
 
 
 class SolverError(Exception):
+    """Custom exception thrown for layout solving errors."""
     def __init__(self, message: str = "Unknown Solver error"):
+        """Initializes the solver exception with an error message."""
         self.message = message
         super().__init__(self.message)

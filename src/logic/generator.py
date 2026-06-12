@@ -6,7 +6,9 @@ from typing import Generator
 
 
 class MazeGenerator:
+    """Generates and manages a maze layout including custom patterns."""
     def __init__(self, config: Config) -> None:
+        """Initializes the MazeGenerator with a configuration."""
         self.config = config
         self.maze = Maze(self.config)
         self.visited: set[Cell] = set()
@@ -23,16 +25,19 @@ class MazeGenerator:
         self.generate_logo()
 
     def generate_map(self) -> None:
+        """Generates the base maze map and add 42 pattern."""
         self.maze.create_map()
         self.generate_42()
         self.enclose_map()
 
     def enclose_map(self) -> None:
+        """Iterates through rows to create the boundary outer walls."""
         for row in self.maze.rows:
             for cell in row:
                 self.generate_borders(cell)
 
     def generate_borders(self, cell: Cell) -> None:
+        """Sets boundary walls for cells located on the maze edges."""
         if cell.y == 0:
             cell.set_bit(Directions.NORTH, 1)
         if cell.y == self.maze.height - 1:
@@ -43,6 +48,7 @@ class MazeGenerator:
             cell.set_bit(Directions.EAST, 1)
 
     def generate_logo(self) -> None:
+        """Generates the walls surrounding the logo cells."""
         for coord in self.logo_42:
             cell = self.maze.get_cell(coord)
             self.visited.add(cell)
@@ -50,16 +56,19 @@ class MazeGenerator:
                 self.update_wall(cell, direction, 1)
 
     def solve_with(self, algorithm: int) -> None:
+        """Solves the maze using the specified algorithm identifier."""
         solver = Solver(self.maze)
         solution = solver.use_algorithm(algorithm)
         self.solution = solution
 
     def generate_solution(self) -> Generator[tuple[int, int],
                                              None, None]:
+        """Yields coordinates of the solution path step-by-step."""
         for cell in self.solution:
             yield cell.coord
 
     def validate_walls(self, cell: Cell) -> None:
+        """Ensures adjacent walls are synchronized with neighbors."""
         upper_neigh = cell.get_neighbour_coords(Directions.NORTH)
         left_neigh = cell.get_neighbour_coords(Directions.WEST)
         lower_neigh = cell.get_neighbour_coords(Directions.SOUTH)
@@ -84,22 +93,26 @@ class MazeGenerator:
 
     def enforce_shared_wall(self, reference: Cell, wall: int,
                             target: Cell) -> None:
+        """Synchronizes a wall state between two adjacent cells."""
         neighbour_wall = reference.calculate_bit(Directions.opposite(wall))
         cell_wall = target.calculate_bit(wall)
         if neighbour_wall != cell_wall:
             target.set_bit(wall, neighbour_wall)
 
     def export_generated_data(self) -> None:
+        """Exports the finalized maze layout and solution to a file."""
         exporter = MazeExporter(self.config.output_file,
                                 self.maze, self.solution)
         exporter.generate_output()
 
     def erase_map(self) -> None:
+        """Clears the maze grid structural data and resets path keys."""
         self.maze.clear_map()
         self.map_hex = ""
         self.path = ""
 
     def clear_solutions(self) -> None:
+        """Resets path structures, preserving core logo placements."""
         self.paths.clear()
         self.solution.clear()
         self.visited.clear()
@@ -109,6 +122,7 @@ class MazeGenerator:
         self.visited.union(logo_42_cells)
 
     def regenerate_map(self) -> None:
+        """Clear the current maze and builds a fresh map collection."""
         self.clear_solutions()
         self.erase_map()
         self.maze = Maze(self.config)
@@ -116,6 +130,7 @@ class MazeGenerator:
         self.generate_logo()
 
     def get_free_neighbours(self, curr: Cell) -> list[Cell]:
+        """Retrieves unvisited valid cells surrounding current node."""
         free: list[Cell] = []
         for direction in range(4):
             neighbour = curr.get_neighbour_coords(direction)
@@ -128,6 +143,7 @@ class MazeGenerator:
         return free
 
     def draw_walls(self, prev: Cell, curr: Cell) -> None:
+        """Updates and validates walls between two sequential cells."""
         self.validate_walls(prev)
         wall_between = Directions.between(prev, curr)
         for wall in range(4):
@@ -139,6 +155,7 @@ class MazeGenerator:
             self.update_wall(curr, Directions.opposite(wall_between), 0)
 
     def update_wall(self, cell: Cell, wall: int, value: int) -> None:
+        """Sets a wall value and mirrors it to the adjacent neighbor."""
         neigh = cell.get_neighbour_coords(wall)
         if self.maze.within_map(neigh):
             cell.set_bit(wall, value)
@@ -146,6 +163,7 @@ class MazeGenerator:
                                      self.maze.get_cell(neigh))
 
     def transform_to_imperfect_maze(self) -> Generator[None, None, None]:
+        """Carves random openings in walls to make the maze imperfect."""
         maze = self.maze
         size = maze.height * maze.width
         remove_amount = int(size * 0.50)
@@ -162,6 +180,7 @@ class MazeGenerator:
             yield
 
     def look_for_invalid_neighbours(self) -> Generator[None, None, None]:
+        """Scans entire grid to identify and correct isolated cells."""
         for row in self.maze.rows:
             for cell in row:
                 if self.invalid_surrounding_neighbours(cell):
@@ -169,6 +188,7 @@ class MazeGenerator:
                     self.correct_neighbours(cell)
 
     def invalid_surrounding_neighbours(self, cell: Cell) -> bool:
+        """Checks if the cell is the center of 3x3 empty space."""
         corners_diff = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
         corner_bits = [[1, 2], [2, 3], [0, 1], [0, 3]]
         sides_diff = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -194,6 +214,7 @@ class MazeGenerator:
         return True
 
     def correct_neighbours(self, cell: Cell) -> bool:
+        """Fixes isolated cells by carving paths to valid neighbors."""
         free = [dir for dir in range(4)]
         while free:
             dir = rand.randint(0, 3)
@@ -207,10 +228,7 @@ class MazeGenerator:
         return False
 
     def backtracking(self, start: Cell) -> Generator[None, None, None]:
-        """
-        Add cell to path, draw and sync neighbours,
-        remove if leads to dead end and repeat
-        """
+        """Generates a perfect maze via iterative backtracking loop."""
         stack: list[Cell] = [start]
         self.visited.add(start)
         self.paths.append(stack)
@@ -242,6 +260,7 @@ class MazeGenerator:
                 yield
 
     def generate_42(self) -> None:
+        """Coordinates generation of the centered logo."""
         min_height = 5
         min_width = 7
         four: list[tuple[int, int]] = []
@@ -271,6 +290,7 @@ class MazeGenerator:
 
     def validate_42(self, forbidden: list[tuple[int, int]],
                     logo_42: list[tuple[int, int]]) -> None:
+        """Validates logo placements to ensure paths are not blocked."""
         min_height = 5
         min_width = 7
         maze = self.maze
@@ -290,6 +310,7 @@ class MazeGenerator:
 
     def generate_4(self, center_x: int,
                    center_y: int) -> list[tuple[int, int]]:
+        """Calculates coordinate mapping sets for the digit '4'."""
         return [(center_x - 3, center_y - 2), (center_x - 3, center_y - 1),
                 (center_x - 3, center_y), (center_x - 2, center_y),
                 (center_x - 1, center_y), (center_x - 1, center_y + 1),
@@ -297,6 +318,7 @@ class MazeGenerator:
 
     def generate_2(self, center_x: int,
                    center_y: int) -> list[tuple[int, int]]:
+        """Calculates coordinate mapping sets for the digit '2'."""
         return [(center_x + 1, center_y - 2), (center_x + 2, center_y - 2),
                 (center_x + 3, center_y - 2), (center_x + 3, center_y - 1),
                 (center_x + 3, center_y), (center_x + 2, center_y),
