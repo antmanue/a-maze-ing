@@ -61,11 +61,11 @@ class MazeDisplay:
         print("Opening A-Maze-ing graphic window...")
         print("Press 'C' to change color")
         print("Press 'R' to re-generate the maze")
+        print("Press 'P' to turn on/off the path")
         print("Press 'ESC' to exit")
 
         print("\nFor the following options wait until maze is "
               "fully generated.")
-        print("Press 'P' to turn on/off the path")
         print("Press 'I' to toggle between Perfect/Imperfect maze")
         print()
         if self.gen.error_42:
@@ -91,9 +91,8 @@ class MazeDisplay:
             self.needs_update = True
         # Tecla 'P' Liga/Desliga o caminho da solucao
         elif keycode == 112:
-            if self.path:
-                self.show_path = not self.show_path
-                self.needs_update = True
+            self.show_path = not self.show_path
+            self.needs_update = True
         # Tecla 'R' Regen Maze
         elif keycode == 114:
             self.gen.regenerate_map()
