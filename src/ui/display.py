@@ -1,5 +1,5 @@
 from typing import Any
-from mlx import Mlx  # type: ignore
+from mlx import Mlx
 import os
 from ..logic import MazeGenerator, Algorithms
 

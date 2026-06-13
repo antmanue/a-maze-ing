@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import random as rand
-
 
 class Config:
     """Tracks structural setups and validations from setup properties."""
