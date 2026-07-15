@@ -1,5 +1,0 @@
-Code Reusability to full install program in a new enviornement:
-
-run: make venv
-run: make package
-run: make run
